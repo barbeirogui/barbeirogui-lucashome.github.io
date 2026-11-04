@@ -1,0 +1,8 @@
+{
+  "name": "VTEX Pulse - SEO, GEO & Analytics Growth Platform",
+  "description": "Painel centralizado para e-commerce VTEX com estatísticas de SEO, GEO, Search Console e Analytics, sugestões automáticas de otimização com IA para conversão, alertas de quedas bruscas e relatórios mensais comparativos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
