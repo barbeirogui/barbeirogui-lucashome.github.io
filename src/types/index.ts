@@ -174,4 +174,57 @@ export interface VtexUrlBuildResult {
   notes: string[];
 }
 
+export interface SyntheticConnectionItem {
+  id: 'vtex_api_keys' | 'environment_url' | 'gsc_credentials';
+  name: string;
+  status: 'passed' | 'failed' | 'checking' | 'idle';
+  summary: string;
+  detail: string;
+  latencyMs?: number;
+  testedAt?: string;
+  endpointOrProperty?: string;
+}
+
+export interface SyntheticConnectionReport {
+  overallStatus: 'healthy' | 'degraded' | 'critical' | 'idle';
+  testedAt: string;
+  connections: {
+    vtexApiKeys: SyntheticConnectionItem;
+    environmentUrl: SyntheticConnectionItem;
+    gscCredentials: SyntheticConnectionItem;
+  };
+}
+
+export interface SeoMetaTagItem {
+  present: boolean;
+  value?: string;
+  length?: number;
+  status: 'passed' | 'warning' | 'failed';
+  detail: string;
+}
+
+export interface SeoHttpTestResult {
+  url: string;
+  statusCode: number;
+  statusText: string;
+  latencyMs: number;
+  testedAt: string;
+  isLiveFetch: boolean;
+  score: number;
+  metaTags: {
+    title: SeoMetaTagItem;
+    description: SeoMetaTagItem;
+    canonical: SeoMetaTagItem & { matchesUrl: boolean };
+    robots: SeoMetaTagItem & { isIndexable: boolean };
+    viewport: SeoMetaTagItem;
+    h1: SeoMetaTagItem & { count: number };
+    openGraph: SeoMetaTagItem & { ogTitle?: string; ogImage?: string; ogUrl?: string };
+    twitterCard: SeoMetaTagItem & { cardType?: string };
+    schemaJsonLd: SeoMetaTagItem & { schemaType?: string; snippet?: string };
+    vtexLegacyMarkers: SeoMetaTagItem & { hasSkuJson: boolean; hasArquivosAsset: boolean };
+  };
+  rawHeadSnippet: string;
+  recommendations: string[];
+}
+
 

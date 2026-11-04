@@ -149,13 +149,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 border-t border-slate-800 space-y-2 bg-slate-950/90">
         <button
           onClick={onOpenSetup}
-          title={isCollapsed ? 'Configurar Ferramentas & Vínculos' : undefined}
-          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 transition-colors shadow-sm active:scale-95 ${
+          title={isCollapsed ? 'Configurações & Vínculos' : undefined}
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 transition-colors shadow-sm active:scale-95 cursor-pointer ${
             isCollapsed ? 'justify-center' : 'justify-start'
           }`}
+          aria-label="Abrir configurações da loja e ferramentas"
         >
           <Sliders className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span className="truncate">Configurar Ferramentas</span>}
+          {!isCollapsed && <span className="truncate">Configurações</span>}
         </button>
 
         {!isCollapsed && (

@@ -13,7 +13,8 @@ import {
   Globe,
 } from 'lucide-react';
 
-export type { TabType } from './Sidebar';
+import type { TabType } from './Sidebar';
+export type { TabType };
 
 interface HeaderProps {
   activeTab: TabType;
@@ -114,11 +115,11 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={onOpenSetup}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 rounded-lg shadow-sm transition-colors whitespace-nowrap shrink-0 active:scale-95"
-            aria-label="Configurar chaves VTEX e integrações"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 rounded-lg shadow-sm transition-colors whitespace-nowrap shrink-0 active:scale-95 cursor-pointer"
+            aria-label="Abrir configurações"
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Configurar Ferramentas</span>
+            <span>Configurações</span>
           </button>
         </div>
       </div>

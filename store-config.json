@@ -1,0 +1,19 @@
+{
+  "vtexConfig": {
+    "accountName": "loja-vtex-premium",
+    "appKey": "vtexappkey-lojamoda-XQZT92",
+    "appToken": "vtextoken-secret-prod-8291048102938475",
+    "environment": "vtexcommercestable",
+    "storeDomain": "www.lojavtexpremium.com.br",
+    "isConnected": true,
+    "lastConnectedAt": "04/11/2026, 19:01:05",
+    "vtexVersion": "VTEX CMS Legacy (Portal)"
+  },
+  "googleConfig": {
+    "searchConsoleProperty": "sc-domain:lojamoda.com.br",
+    "searchConsoleConnected": true,
+    "ga4PropertyId": "412891920",
+    "ga4MeasurementId": "G-7XYZ982104",
+    "ga4Connected": true
+  }
+}

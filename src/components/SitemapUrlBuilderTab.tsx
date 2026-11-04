@@ -17,8 +17,19 @@ import {
   ArrowRight,
   ShieldCheck,
   CheckSquare,
+  Play,
+  CheckCircle2,
+  AlertCircle,
+  Code2,
+  ChevronDown,
+  ChevronUp,
+  Zap,
+  Tag,
+  Share2,
+  Eye,
+  Sparkles,
 } from 'lucide-react';
-import { SitemapValidationResult, UrlCheckResult, VtexUrlBuildResult } from '../types';
+import { SitemapValidationResult, UrlCheckResult, VtexUrlBuildResult, SeoHttpTestResult } from '../types';
 
 interface SitemapUrlBuilderTabProps {
   storeDomain: string;
@@ -45,6 +56,13 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
   const [category, setCategory] = useState('Tênis Esportivos');
   const [filterTerm, setFilterTerm] = useState('Corrida Amortecimento');
   const [buildResult, setBuildResult] = useState<VtexUrlBuildResult | null>(null);
+
+  // HTTP GET Test & SEO Meta Tags state
+  const [seoTestResult, setSeoTestResult] = useState<SeoHttpTestResult | null>(null);
+  const [isTestingHttp, setIsTestingHttp] = useState(false);
+  const [customTestUrl, setCustomTestUrl] = useState('');
+  const [showRawHeadCode, setShowRawHeadCode] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -104,6 +122,38 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
     }
   };
 
+  const handleRunHttpTest = async (targetUrl?: string) => {
+    const url = targetUrl || customTestUrl || buildResult?.generatedUrl;
+    if (!url) return;
+
+    setIsTestingHttp(true);
+    setTestError(null);
+    try {
+      const res = await fetch('/api/urls/test-http', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url,
+          storeDomain,
+          type: builderType,
+          name: productName,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.result) {
+        setSeoTestResult(data.result);
+        setCustomTestUrl(url);
+      } else {
+        setTestError(data.message || 'Falha ao executar teste HTTP.');
+      }
+    } catch (err) {
+      console.error('Failed to run HTTP GET test:', err);
+      setTestError('Erro de conexão ao executar requisição HTTP.');
+    } finally {
+      setIsTestingHttp(false);
+    }
+  };
+
   const handleBuildUrl = async () => {
     try {
       const res = await fetch('/api/urls/build', {
@@ -121,6 +171,9 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
       const data = await res.json();
       if (data.success && data.result) {
         setBuildResult(data.result);
+        setCustomTestUrl(data.result.generatedUrl);
+        // Execute HTTP test on generated URL
+        handleRunHttpTest(data.result.generatedUrl);
       }
     } catch (err) {
       console.error('Failed to build URL:', err);
@@ -420,6 +473,7 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
                       <th className="py-2.5 px-3 font-semibold">Status</th>
                       <th className="py-2.5 px-3 font-semibold">Latência</th>
                       <th className="py-2.5 px-3 font-semibold">Diagnóstico & Recomendação VTEX</th>
+                      <th className="py-2.5 px-3 font-semibold text-right">Ação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 font-mono">
@@ -447,6 +501,20 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
                         <td className="py-2.5 px-3 font-sans text-slate-300 text-[11px]">
                           {r.recommendation}
                         </td>
+                        <td className="py-2.5 px-3 text-right font-sans">
+                          <button
+                            onClick={() => {
+                              setActiveSubSection('url-builder');
+                              setCustomTestUrl(r.url);
+                              handleRunHttpTest(r.url);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium text-pink-300 hover:text-white bg-pink-950/50 hover:bg-pink-900/60 border border-pink-500/30 rounded-lg transition-colors"
+                            title="Executar requisição HTTP GET e auditar meta tags"
+                          >
+                            <Play className="w-3 h-3 text-pink-400" />
+                            <span>Auditar Tags</span>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -459,7 +527,8 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
 
       {/* SECTION 3: VTEX URL BUILDER */}
       {activeSubSection === 'url-builder' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Builder Form */}
           <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-5">
             <div>
@@ -606,6 +675,16 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
                   </button>
                 </div>
 
+                {/* Quick HTTP GET Test Action Button */}
+                <button
+                  onClick={() => handleRunHttpTest(buildResult.generatedUrl)}
+                  disabled={isTestingHttp}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold text-white bg-pink-600 hover:bg-pink-500 disabled:opacity-50 rounded-lg shadow-sm transition-all cursor-pointer"
+                >
+                  <Play className={`w-3.5 h-3.5 ${isTestingHttp ? 'animate-spin' : ''}`} />
+                  <span>{isTestingHttp ? 'Testando Requisição HTTP (GET)...' : 'Testar Requisição HTTP GET & Meta Tags'}</span>
+                </button>
+
                 {/* 301 Redirect Mapping Rule for Portal Legacy */}
                 {buildResult.portalUrlManagerRule && (
                   <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
@@ -656,7 +735,392 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
             </div>
           )}
         </div>
-      )}
-    </div>
+
+        {/* HTTP GET Request Test & Essential SEO Meta Tags Inspector */}
+        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 space-y-6 mt-6">
+          {/* Header with Title and URL Input/Action */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-0.5 rounded">
+                  HTTP GET Inspector
+                </span>
+                <span className="text-xs text-slate-500" aria-hidden="true">·</span>
+                <span className="text-xs text-slate-400">Validador de Status 200 OK & Meta Tags Essenciais de SEO</span>
+              </div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Zap className="w-5 h-5 text-pink-400" />
+                <span>Teste de Requisição HTTP (GET) na URL Gerada</span>
+              </h3>
+              <p className="text-xs text-slate-300">
+                Dispara uma requisição HTTP GET no endpoint da loja VTEX, valida o código de resposta (200 OK) e disseca todas as meta tags do HTML retornado.
+              </p>
+            </div>
+
+            {/* URL input and trigger button */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+              <div className="relative min-w-[280px]">
+                <input
+                  type="text"
+                  value={customTestUrl}
+                  onChange={(e) => setCustomTestUrl(e.target.value)}
+                  placeholder="https://sua-loja.com.br/produto/p"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-pink-500"
+                />
+              </div>
+              <button
+                onClick={() => handleRunHttpTest(customTestUrl)}
+                disabled={isTestingHttp || !customTestUrl.trim()}
+                className="flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold text-white bg-pink-600 hover:bg-pink-500 disabled:opacity-50 rounded-lg shadow-sm transition-all shrink-0 cursor-pointer"
+              >
+                <Play className={`w-3.5 h-3.5 ${isTestingHttp ? 'animate-spin' : ''}`} />
+                <span>{isTestingHttp ? 'Executando Teste...' : 'Executar Teste HTTP'}</span>
+              </button>
+            </div>
+          </div>
+
+          {testError && (
+            <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{testError}</span>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {isTestingHttp && (
+            <div className="p-8 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col items-center justify-center gap-3 text-center">
+              <RefreshCw className="w-6 h-6 text-pink-400 animate-spin" />
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-white">Disparando requisição HTTP GET em {customTestUrl}...</p>
+                <p className="text-[11px] text-slate-400">Validando cabeçalhos de resposta, código de status 200 OK e dissecando meta tags do HTML retornado.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Results State */}
+          {!isTestingHttp && seoTestResult && (
+            <div className="space-y-6">
+              {/* Overview Cards Bar */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Card 1: HTTP Status Code */}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-400">Código de Status HTTP</span>
+                    {seoTestResult.statusCode === 200 ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-rose-400" />
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={`text-2xl font-bold font-mono ${
+                        seoTestResult.statusCode === 200
+                          ? 'text-emerald-400'
+                          : seoTestResult.statusCode === 301
+                          ? 'text-amber-400'
+                          : 'text-rose-400'
+                      }`}
+                    >
+                      {seoTestResult.statusCode} {seoTestResult.statusText}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>Latência de Rede:</span>
+                    <span className="font-mono font-semibold text-slate-200">{seoTestResult.latencyMs}ms</span>
+                  </div>
+                </div>
+
+                {/* Card 2: Score de Conformidade SEO */}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-400">Score de Meta Tags SEO</span>
+                    <ShieldCheck className="w-4 h-4 text-pink-400" />
+                  </div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-white font-mono">{seoTestResult.score}/100</span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        seoTestResult.score >= 90
+                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                          : seoTestResult.score >= 75
+                          ? 'bg-amber-950 text-amber-300 border border-amber-500/40'
+                          : 'bg-rose-950 text-rose-300 border border-rose-500/40'
+                      }`}
+                    >
+                      {seoTestResult.score >= 90 ? 'Excelente' : seoTestResult.score >= 75 ? 'Regular' : 'Atenção'}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>Tags Aprovadas:</span>
+                    <span className="font-semibold text-emerald-400">
+                      {Object.values(seoTestResult.metaTags).filter((t: any) => t.status === 'passed').length}/10 Válidas
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card 3: Canônica & Indexabilidade */}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-400">Canônica & Indexabilidade</span>
+                    <Globe className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
+                      <span className={`w-2 h-2 rounded-full ${seoTestResult.metaTags.canonical.matchesUrl ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                      <span>{seoTestResult.metaTags.canonical.matchesUrl ? 'Canônica Exata (/p)' : 'Canônica Divergente'}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                      <span className={`w-2 h-2 rounded-full ${seoTestResult.metaTags.robots.isIndexable ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+                      <span>{seoTestResult.metaTags.robots.isIndexable ? 'Robots: index, follow' : 'Robots: noindex'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 4: Origem da Resposta */}
+                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-medium text-slate-400">Origem & Protocolo</span>
+                    <CheckSquare className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div className="text-xs font-bold text-slate-200">
+                    {seoTestResult.isLiveFetch ? 'Conexão Real (Live Web)' : 'Simulação VTEX CMS Legacy'}
+                  </div>
+                  <div className="text-[11px] text-slate-400">
+                    Testado em: <span className="font-mono text-slate-300">{seoTestResult.testedAt}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid of 10 Meta Tags Detailed Inspection */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <Tag className="w-4 h-4 text-pink-400" />
+                    <span>Auditoria Detalhada de Meta Tags & Controles VTEX</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-400">Padrão Googlebot + OpenGraph + Schema.org</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Tag 1: <title> */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.title.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">&lt;title&gt;</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {seoTestResult.metaTags.title.length || 0} caracteres
+                      </span>
+                    </div>
+                    <div className="text-xs font-medium text-slate-200 bg-slate-900 p-2 rounded border border-slate-800 truncate" title={seoTestResult.metaTags.title.value}>
+                      {seoTestResult.metaTags.title.value || '<title ausente>'}
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.title.detail}</p>
+                  </div>
+
+                  {/* Tag 2: <meta name="description"> */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.description.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">&lt;meta name="description"&gt;</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {seoTestResult.metaTags.description.length || 0} caracteres
+                      </span>
+                    </div>
+                    <div className="text-xs font-medium text-slate-200 bg-slate-900 p-2 rounded border border-slate-800 line-clamp-2" title={seoTestResult.metaTags.description.value}>
+                      {seoTestResult.metaTags.description.value || '<description ausente>'}
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.description.detail}</p>
+                  </div>
+
+                  {/* Tag 3: <link rel="canonical"> */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.canonical.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">&lt;link rel="canonical"&gt;</span>
+                      </div>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${seoTestResult.metaTags.canonical.matchesUrl ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'}`}>
+                        {seoTestResult.metaTags.canonical.matchesUrl ? 'Compatível 100%' : 'Diferente'}
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono text-pink-300 bg-slate-900 p-2 rounded border border-slate-800 truncate" title={seoTestResult.metaTags.canonical.value}>
+                      {seoTestResult.metaTags.canonical.value || '<canonical ausente>'}
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.canonical.detail}</p>
+                  </div>
+
+                  {/* Tag 4: <meta name="robots"> */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.robots.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">&lt;meta name="robots"&gt;</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-400">
+                        {seoTestResult.metaTags.robots.isIndexable ? 'Indexável' : 'Bloqueado'}
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono text-slate-200 bg-slate-900 p-2 rounded border border-slate-800">
+                      {seoTestResult.metaTags.robots.value || 'index, follow'}
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.robots.detail}</p>
+                  </div>
+
+                  {/* Tag 5: <h1> Header */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.h1.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">&lt;h1&gt; Título Primário</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {seoTestResult.metaTags.h1.count} tag(s) H1
+                      </span>
+                    </div>
+                    <div className="text-xs font-medium text-slate-200 bg-slate-900 p-2 rounded border border-slate-800 truncate" title={seoTestResult.metaTags.h1.value}>
+                      {seoTestResult.metaTags.h1.value || '<h1 ausente>'}
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.h1.detail}</p>
+                  </div>
+
+                  {/* Tag 6: OpenGraph (Social) */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.openGraph.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">OpenGraph (og:title, og:image)</span>
+                      </div>
+                      <Share2 className="w-3.5 h-3.5 text-slate-400" />
+                    </div>
+                    <div className="text-xs text-slate-200 bg-slate-900 p-2 rounded border border-slate-800 truncate">
+                      {seoTestResult.metaTags.openGraph.ogTitle || 'Tags OpenGraph detectadas'}
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.openGraph.detail}</p>
+                  </div>
+
+                  {/* Tag 7: Schema.org JSON-LD */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.schemaJsonLd.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">Schema.org JSON-LD</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-purple-400">
+                        {seoTestResult.metaTags.schemaJsonLd.schemaType ? `@type: ${seoTestResult.metaTags.schemaJsonLd.schemaType}` : 'Ausente'}
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono text-purple-300 bg-slate-900 p-2 rounded border border-slate-800 truncate">
+                      {seoTestResult.metaTags.schemaJsonLd.schemaType ? `application/ld+json (${seoTestResult.metaTags.schemaJsonLd.schemaType})` : '<ld+json ausente>'}
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.schemaJsonLd.detail}</p>
+                  </div>
+
+                  {/* Tag 8: Marcadores VTEX CMS Legacy */}
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {seoTestResult.metaTags.vtexLegacyMarkers.status === 'passed' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                        )}
+                        <span className="text-xs font-bold text-white font-mono">VTEX CMS Legacy (skuJson & /arquivos/)</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded">
+                        Portal Legacy
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-200 bg-slate-900 p-2 rounded border border-slate-800 flex items-center justify-between">
+                      <span>skuJson: <strong className="text-emerald-400">{seoTestResult.metaTags.vtexLegacyMarkers.hasSkuJson ? 'Presente' : 'Não'}</strong></span>
+                      <span>/arquivos/: <strong className="text-emerald-400">{seoTestResult.metaTags.vtexLegacyMarkers.hasArquivosAsset ? 'Presente' : 'Não'}</strong></span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">{seoTestResult.metaTags.vtexLegacyMarkers.detail}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Code Inspector Toggle */}
+              <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowRawHeadCode(!showRawHeadCode)}
+                    className="flex items-center gap-2 text-xs font-bold text-pink-400 hover:text-pink-300 transition-colors cursor-pointer"
+                  >
+                    <Code2 className="w-4 h-4" />
+                    <span>{showRawHeadCode ? 'Ocultar Código <head> Inspecionado' : 'Inspecionar Código <head> e Meta Tags Retornadas'}</span>
+                    {showRawHeadCode ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+
+                  {showRawHeadCode && (
+                    <button
+                      onClick={() => handleCopy(seoTestResult.rawHeadSnippet, 'head_raw')}
+                      className="text-[11px] text-slate-300 hover:text-white flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded border border-slate-700 cursor-pointer"
+                    >
+                      {copiedId === 'head_raw' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedId === 'head_raw' ? 'Copiado!' : 'Copiar <head>'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {showRawHeadCode && (
+                  <pre className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-[11px] font-mono text-slate-300 overflow-x-auto max-h-[300px] leading-relaxed">
+                    {seoTestResult.rawHeadSnippet}
+                  </pre>
+                )}
+              </div>
+
+              {/* Actionable Advice for VTEX CMS Legacy */}
+              {seoTestResult.recommendations.length > 0 && (
+                <div className="p-4 rounded-xl bg-slate-950 border border-pink-500/20 space-y-2">
+                  <h4 className="text-xs font-bold text-pink-300 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-pink-400" />
+                    <span>Recomendações Técnicas para o Portal VTEX Legacy:</span>
+                  </h4>
+                  <ul className="text-xs text-slate-300 space-y-1 list-disc list-inside">
+                    {seoTestResult.recommendations.map((rec, i) => (
+                      <li key={i}>{rec}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+  </div>
   );
 };

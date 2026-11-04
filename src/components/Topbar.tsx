@@ -108,10 +108,12 @@ export const Topbar: React.FC<TopbarProps> = ({
         {/* Primary Action Button */}
         <button
           onClick={onOpenSetup}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 rounded-lg shadow-sm transition-colors whitespace-nowrap active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 rounded-lg shadow-sm transition-colors whitespace-nowrap active:scale-95 cursor-pointer"
+          title="Abrir configurações e vínculos"
+          aria-label="Abrir configurações"
         >
           <Sliders className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Configurar Ferramentas</span>
+          <span className="hidden sm:inline">Configurações</span>
         </button>
       </div>
     </header>

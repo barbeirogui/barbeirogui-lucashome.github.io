@@ -27,8 +27,36 @@ export default function App() {
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [dropThreshold, setDropThreshold] = useState<number>(12);
 
-  const [vtexConfig, setVtexConfig] = useState<VtexConfig>(initialVtexConfig);
-  const [googleConfig, setGoogleConfig] = useState<GoogleConfig>(initialGoogleConfig);
+  // Load persisted configuration from localStorage if available
+  const [vtexConfig, setVtexConfig] = useState<VtexConfig>(() => {
+    try {
+      const saved = localStorage.getItem('vtex_pulse_config_vtex');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.accountName) {
+          return { ...initialVtexConfig, ...parsed };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read vtexConfig from localStorage:', e);
+    }
+    return initialVtexConfig;
+  });
+
+  const [googleConfig, setGoogleConfig] = useState<GoogleConfig>(() => {
+    try {
+      const saved = localStorage.getItem('vtex_pulse_config_google');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed) {
+          return { ...initialGoogleConfig, ...parsed };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read googleConfig from localStorage:', e);
+    }
+    return initialGoogleConfig;
+  });
 
   const [metrics, setMetrics] = useState(coreMetricsData);
   const [alerts, setAlerts] = useState<AlertNotification[]>(() =>
@@ -38,6 +66,63 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [aiSource, setAiSource] = useState<string>('gemini-3.8-flash');
+
+  // Load server-persisted config on initial mount (keeps state synchronized across sessions)
+  useEffect(() => {
+    fetch('/api/config')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          if (data.vtexConfig && data.vtexConfig.accountName) {
+            setVtexConfig(data.vtexConfig);
+            try {
+              localStorage.setItem('vtex_pulse_config_vtex', JSON.stringify(data.vtexConfig));
+            } catch (err) {
+              console.warn('Could not save to localStorage:', err);
+            }
+          }
+          if (data.googleConfig) {
+            setGoogleConfig(data.googleConfig);
+            try {
+              localStorage.setItem('vtex_pulse_config_google', JSON.stringify(data.googleConfig));
+            } catch (err) {
+              console.warn('Could not save to localStorage:', err);
+            }
+          }
+        }
+      })
+      .catch((err) => console.warn('Could not load server config:', err));
+  }, []);
+
+  // Save VTEX config to state, localStorage and server
+  const handleSaveVtexConfig = (newConfig: VtexConfig) => {
+    setVtexConfig(newConfig);
+    try {
+      localStorage.setItem('vtex_pulse_config_vtex', JSON.stringify(newConfig));
+    } catch (e) {
+      console.warn('Failed to save vtexConfig to localStorage:', e);
+    }
+    fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vtexConfig: newConfig }),
+    }).catch((err) => console.warn('Failed to sync vtexConfig to server:', err));
+  };
+
+  // Save Google config to state, localStorage and server
+  const handleSaveGoogleConfig = (newConfig: GoogleConfig) => {
+    setGoogleConfig(newConfig);
+    try {
+      localStorage.setItem('vtex_pulse_config_google', JSON.stringify(newConfig));
+    } catch (e) {
+      console.warn('Failed to save googleConfig to localStorage:', e);
+    }
+    fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ googleConfig: newConfig }),
+    }).catch((err) => console.warn('Failed to sync googleConfig to server:', err));
+  };
 
   // Load AI optimizations on initial mount
   useEffect(() => {
@@ -75,7 +160,7 @@ export default function App() {
         setAiSource(data.source || 'gemini-3.8-flash');
       }
     } catch (err) {
-      console.error('Failed to load AI suggestions:', err);
+      console.warn('Failed to load AI suggestions, using default fallback:', err);
     } finally {
       setIsLoadingAi(false);
     }
@@ -207,9 +292,9 @@ export default function App() {
         isOpen={isSetupOpen}
         onClose={() => setIsSetupOpen(false)}
         vtexConfig={vtexConfig}
-        onSaveVtexConfig={setVtexConfig}
+        onSaveVtexConfig={handleSaveVtexConfig}
         googleConfig={googleConfig}
-        onSaveGoogleConfig={setGoogleConfig}
+        onSaveGoogleConfig={handleSaveGoogleConfig}
       />
     </div>
   );

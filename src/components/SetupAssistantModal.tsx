@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Sliders,
   CheckCircle,
+  CheckCircle2,
   AlertTriangle,
   XCircle,
   Key,
@@ -16,8 +17,9 @@ import {
   Activity,
   Globe,
   FileCheck,
+  ArrowRight,
 } from 'lucide-react';
-import { VtexConfig, GoogleConfig, ToolValidationResult } from '../types';
+import { VtexConfig, GoogleConfig, ToolValidationResult, SyntheticConnectionReport } from '../types';
 
 interface SetupAssistantModalProps {
   isOpen: boolean;
@@ -68,12 +70,106 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
 
+  // Synthetic connection check state
+  const [syntheticReport, setSyntheticReport] = useState<SyntheticConnectionReport | null>(null);
+  const [isCheckingSynthetic, setIsCheckingSynthetic] = useState<boolean>(false);
+
+  const runSyntheticCheck = async (customParams?: {
+    accName?: string;
+    aKey?: string;
+    aToken?: string;
+    env?: string;
+    domain?: string;
+    gsc?: string;
+  }) => {
+    setIsCheckingSynthetic(true);
+    try {
+      const res = await fetch('/api/tools/synthetic-connection-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountName: customParams?.accName ?? accountName,
+          appKey: customParams?.aKey ?? appKey,
+          appToken: customParams?.aToken ?? appToken,
+          environment: customParams?.env ?? environment,
+          storeDomain: customParams?.domain ?? storeDomain,
+          searchConsoleProperty: customParams?.gsc ?? gscProperty,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.report) {
+        setSyntheticReport(data.report);
+      }
+    } catch (err) {
+      console.error('Error running synthetic connection check:', err);
+    } finally {
+      setIsCheckingSynthetic(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setAccountName(vtexConfig.accountName);
+      setAppKey(vtexConfig.appKey);
+      setAppToken(vtexConfig.appToken);
+      setEnvironment(vtexConfig.environment);
+      setStoreDomain(vtexConfig.storeDomain);
+      setGscProperty(googleConfig.searchConsoleProperty);
+      setGa4Property(googleConfig.ga4PropertyId);
+      setGa4Measurement(googleConfig.ga4MeasurementId);
+      runSyntheticCheck({
+        accName: vtexConfig.accountName,
+        aKey: vtexConfig.appKey,
+        aToken: vtexConfig.appToken,
+        env: vtexConfig.environment,
+        domain: vtexConfig.storeDomain,
+        gsc: googleConfig.searchConsoleProperty,
+      });
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedText(id);
     setTimeout(() => setCopiedText(null), 2000);
+  };
+
+  const handleSaveAll = () => {
+    const updatedVtex: VtexConfig = {
+      accountName,
+      appKey,
+      appToken,
+      environment,
+      storeDomain,
+      isConnected: Boolean(accountName && appKey && appToken),
+      lastConnectedAt: new Date().toLocaleString('pt-BR'),
+      vtexVersion: 'VTEX CMS Legacy (Portal)',
+    };
+
+    const updatedGoogle: GoogleConfig = {
+      searchConsoleProperty: gscProperty,
+      searchConsoleConnected: Boolean(gscProperty),
+      ga4PropertyId: ga4Property,
+      ga4MeasurementId: ga4Measurement,
+      ga4Connected: Boolean(ga4Measurement),
+    };
+
+    onSaveVtexConfig(updatedVtex);
+    onSaveGoogleConfig(updatedGoogle);
+
+    setSaveSuccessNotice('Todas as configurações foram salvas e sincronizadas com sucesso!');
+    setTimeout(() => setSaveSuccessNotice(null), 3500);
+
+    runSyntheticCheck({
+      accName: accountName,
+      aKey: appKey,
+      aToken: appToken,
+      env: environment,
+      domain: storeDomain,
+      gsc: gscProperty,
+    });
   };
 
   const handleValidateTool = async (tool: 'vtex' | 'gsc' | 'ga4' | 'geo') => {
@@ -145,8 +241,9 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
       lastConnectedAt: new Date().toLocaleString('pt-BR'),
       vtexVersion: 'VTEX CMS Legacy (Portal)',
     });
-    setSaveSuccessNotice('Configurações da VTEX salvas com sucesso!');
+    setSaveSuccessNotice('Configurações da VTEX salvas e persistidas com sucesso!');
     setTimeout(() => setSaveSuccessNotice(null), 3000);
+    runSyntheticCheck({ accName: accountName, aKey: appKey, aToken: appToken, env: environment, domain: storeDomain });
   };
 
   const handleSaveGoogleManual = () => {
@@ -157,8 +254,9 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
       ga4MeasurementId: ga4Measurement,
       ga4Connected: Boolean(ga4Measurement),
     });
-    setSaveSuccessNotice('Configurações do Google (GSC & GA4) salvas com sucesso!');
+    setSaveSuccessNotice('Configurações do Google (GSC & GA4) salvas e persistidas com sucesso!');
     setTimeout(() => setSaveSuccessNotice(null), 3000);
+    runSyntheticCheck({ gsc: gscProperty });
   };
 
   // Diagnostic Checklist Component
@@ -250,21 +348,32 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
             </div>
             <div>
               <h2 id="setup-modal-title" className="text-base font-bold text-white">
-                Assistente Central de Configuração & Validação de Vínculos
+                Configurações da Loja & Validação de Vínculos
               </h2>
               <p className="text-xs text-slate-400">
-                Conecte e teste em tempo real o vínculo da sua loja VTEX CMS Legacy, Search Console, GA4 e IAs (GEO).
+                Conecte, salve e teste em tempo real o vínculo da sua loja VTEX CMS Legacy, Search Console, GA4 e IAs (GEO).
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-            aria-label="Fechar modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSaveAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-all cursor-pointer active:scale-95"
+              title="Salvar todas as alterações"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Salvar Alterações</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Fechar modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Global Save Notice */}
@@ -274,6 +383,306 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
             <span>{saveSuccessNotice}</span>
           </div>
         )}
+
+        {/* CONNECTION STATUS - SYNTHETIC CHECK SECTION */}
+        <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/90 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-emerald-400">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-white tracking-wide uppercase">
+                    Status de Conexão (Connection Status)
+                  </h3>
+                  {syntheticReport && (
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        syntheticReport.overallStatus === 'healthy'
+                          ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+                          : syntheticReport.overallStatus === 'degraded'
+                          ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+                          : 'bg-rose-950/60 text-rose-300 border-rose-500/40'
+                      }`}
+                    >
+                      {syntheticReport.overallStatus === 'healthy'
+                        ? '3/3 Conexões Válidas'
+                        : syntheticReport.overallStatus === 'degraded'
+                        ? 'Conexões Parciais'
+                        : 'Conexões Críticas / Incompletas'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Verificação sintética de conectividade das Chaves VTEX, Resolução de Host do Ambiente e Credenciais GSC.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => runSyntheticCheck()}
+              disabled={isCheckingSynthetic}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 disabled:opacity-50 transition-colors shadow-sm cursor-pointer"
+              title="Executar verificação sintética agora"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-pink-400 ${isCheckingSynthetic ? 'animate-spin' : ''}`} />
+              <span>{isCheckingSynthetic ? 'Verificando...' : 'Executar Verificação Sintética'}</span>
+            </button>
+          </div>
+
+          {/* 3 CONNECTION STATUS CARDS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Card 1: VTEX API Keys */}
+            {(() => {
+              const item = syntheticReport?.connections.vtexApiKeys;
+              const isPassed = item?.status === 'passed';
+              const isChecking = isCheckingSynthetic;
+
+              return (
+                <div
+                  className={`p-3 rounded-xl border transition-all ${
+                    isChecking
+                      ? 'bg-slate-900/60 border-slate-800'
+                      : isPassed
+                      ? 'bg-emerald-950/20 border-emerald-500/40'
+                      : 'bg-rose-950/20 border-rose-500/40'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isChecking ? (
+                        <RefreshCw className="w-4 h-4 text-pink-400 animate-spin shrink-0" />
+                      ) : isPassed ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <span className="text-xs font-bold text-white block truncate">
+                          Chaves de API VTEX
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono block truncate">
+                          {item?.endpointOrProperty || 'AppKey & Token'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {item?.latencyMs && isPassed && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-900 border border-slate-800 text-slate-300">
+                          {item.latencyMs}ms
+                        </span>
+                      )}
+                      <span
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex items-center gap-1 ${
+                          isPassed
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        {isPassed ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>Válido</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3 text-rose-400" />
+                            <span>Falha</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-2 text-[11px] text-slate-300 line-clamp-2 leading-tight">
+                    {item?.detail || 'Verificando formato de chave e autenticação no License Manager...'}
+                  </p>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400">
+                      {isPassed ? 'Autenticado' : 'Requer atenção'}
+                    </span>
+                    <button
+                      onClick={() => setActiveSubTab('vtex')}
+                      className="text-[10px] text-pink-400 hover:text-pink-300 font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Configurar Chaves</span>
+                      <ArrowRight className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Card 2: Environment URL */}
+            {(() => {
+              const item = syntheticReport?.connections.environmentUrl;
+              const isPassed = item?.status === 'passed';
+              const isChecking = isCheckingSynthetic;
+
+              return (
+                <div
+                  className={`p-3 rounded-xl border transition-all ${
+                    isChecking
+                      ? 'bg-slate-900/60 border-slate-800'
+                      : isPassed
+                      ? 'bg-emerald-950/20 border-emerald-500/40'
+                      : 'bg-rose-950/20 border-rose-500/40'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isChecking ? (
+                        <RefreshCw className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+                      ) : isPassed ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <span className="text-xs font-bold text-white block truncate">
+                          URL do Ambiente VTEX
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono block truncate">
+                          {item?.endpointOrProperty || 'Endpoint & Host'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {item?.latencyMs && isPassed && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-900 border border-slate-800 text-slate-300">
+                          {item.latencyMs}ms
+                        </span>
+                      )}
+                      <span
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex items-center gap-1 ${
+                          isPassed
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        {isPassed ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>Válido</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3 text-rose-400" />
+                            <span>Falha</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-2 text-[11px] text-slate-300 line-clamp-2 leading-tight">
+                    {item?.detail || 'Verificando resolução de DNS, certificados HTTPS e resposta de host...'}
+                  </p>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400">
+                      {isPassed ? 'HTTPS 200' : 'Host inacessível'}
+                    </span>
+                    <button
+                      onClick={() => setActiveSubTab('vtex')}
+                      className="text-[10px] text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Ver Ambiente</span>
+                      <ArrowRight className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Card 3: Google Search Console */}
+            {(() => {
+              const item = syntheticReport?.connections.gscCredentials;
+              const isPassed = item?.status === 'passed';
+              const isChecking = isCheckingSynthetic;
+
+              return (
+                <div
+                  className={`p-3 rounded-xl border transition-all ${
+                    isChecking
+                      ? 'bg-slate-900/60 border-slate-800'
+                      : isPassed
+                      ? 'bg-emerald-950/20 border-emerald-500/40'
+                      : 'bg-rose-950/20 border-rose-500/40'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {isChecking ? (
+                        <RefreshCw className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
+                      ) : isPassed ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <span className="text-xs font-bold text-white block truncate">
+                          Search Console Credentials
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono block truncate">
+                          {item?.endpointOrProperty || 'Propriedade GSC'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {item?.latencyMs && isPassed && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-mono rounded bg-slate-900 border border-slate-800 text-slate-300">
+                          {item.latencyMs}ms
+                        </span>
+                      )}
+                      <span
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex items-center gap-1 ${
+                          isPassed
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-rose-500/20 text-rose-300'
+                        }`}
+                      >
+                        {isPassed ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                            <span>Válido</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="w-3 h-3 text-rose-400" />
+                            <span>Falha</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mt-2 text-[11px] text-slate-300 line-clamp-2 leading-tight">
+                    {item?.detail || 'Verificando formato de sc-domain e permissão de leitura de sitemaps...'}
+                  </p>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400">
+                      {isPassed ? 'Verificado' : 'Não vinculado'}
+                    </span>
+                    <button
+                      onClick={() => setActiveSubTab('gsc')}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Configurar GSC</span>
+                      <ArrowRight className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
 
         {/* Sub Navigation Tabs */}
         <div className="flex items-center gap-1 px-6 pt-3 border-b border-slate-800 bg-slate-950/40 overflow-x-auto">
@@ -753,6 +1162,29 @@ Sitemap: https://${storeDomain || 'www.sualoja.com.br'}/sitemap.xml`}
               </div>
             </div>
           )}
+        </div>
+
+        {/* Modal Persistent Save Footer */}
+        <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-950 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div className="text-[11px] text-slate-400 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+            <span>As configurações são salvas e persistidas automaticamente no navegador e servidor.</span>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
+            >
+              Fechar
+            </button>
+            <button
+              onClick={handleSaveAll}
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-md transition-all cursor-pointer active:scale-95"
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>Salvar Todas as Configurações</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
