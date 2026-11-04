@@ -34,7 +34,7 @@ export const AiOptimizationsTab: React.FC<AiOptimizationsTabProps> = ({
     { id: 'Checkout/Conversão', label: 'Checkout & Conversão' },
     { id: 'SEO', label: 'SEO Técnico' },
     { id: 'GEO', label: 'GEO (IA Search)' },
-    { id: 'VTEX CMS', label: 'VTEX Intelligent Search' },
+    { id: 'VTEX CMS', label: 'VTEX CMS (Portal)' },
     { id: 'Search Console', label: 'Search Console' },
   ];
 
@@ -61,11 +61,11 @@ export const AiOptimizationsTab: React.FC<AiOptimizationsTabProps> = ({
             <span>SUGESTÕES AUTOMÁTICAS DE OTIMIZAÇÃO (GEMINI 3.8 FLASH)</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white mt-1">
-            Plano de Otimização Prática para Alavancar a Conversão VTEX
+            Plano de Otimização Prática para Alavancar a Conversão no VTEX CMS Legacy
           </h1>
           <p className="text-xs text-slate-300 mt-1 max-w-2xl">
             Recomendações técnicas geradas por IA a partir dos dados do seu e-commerce, com instruções passo a passo
-            para o ecossistema VTEX (Intelligent Search, Store Framework e Checkout).
+            específicas para o VTEX CMS Legacy (HTML Templates, Subtemplates, Gerenciador de Arquivos e Checkout v6).
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export const AiOptimizationsTab: React.FC<AiOptimizationsTabProps> = ({
           </div>
           <span className="text-slate-500" aria-hidden="true">·</span>
           <span className="text-slate-400">
-            Motor: <strong className="text-pink-400">{aiSource === 'gemini-3.8-flash' ? 'Google Gemini 3.8 Flash' : 'Motor Especialista VTEX CRO'}</strong>
+            Motor: <strong className="text-pink-400">{aiSource === 'gemini-3.8-flash' ? 'Google Gemini 3.8 Flash (VTEX Legacy Engine)' : 'Motor Especialista VTEX Legacy CRO'}</strong>
           </span>
         </div>
 

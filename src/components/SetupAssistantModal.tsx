@@ -4,17 +4,20 @@ import {
   Sliders,
   CheckCircle,
   AlertTriangle,
+  XCircle,
   Key,
   ShieldCheck,
-  ExternalLink,
   Search,
   BarChart3,
   Bot,
   Copy,
   Check,
   RefreshCw,
+  Activity,
+  Globe,
+  FileCheck,
 } from 'lucide-react';
-import { VtexConfig, GoogleConfig } from '../types';
+import { VtexConfig, GoogleConfig, ToolValidationResult } from '../types';
 
 interface SetupAssistantModalProps {
   isOpen: boolean;
@@ -47,15 +50,23 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
   const [ga4Property, setGa4Property] = useState(googleConfig.ga4PropertyId);
   const [ga4Measurement, setGa4Measurement] = useState(googleConfig.ga4MeasurementId);
 
-  // Test connection state
-  const [isTestingVtex, setIsTestingVtex] = useState(false);
-  const [vtexTestStatus, setVtexTestStatus] = useState<{
-    success: boolean;
-    message: string;
-    details?: any;
-  } | null>(null);
+  // Validation states per tool
+  const [isValidating, setIsValidating] = useState<Record<string, boolean>>({
+    vtex: false,
+    gsc: false,
+    ga4: false,
+    geo: false,
+  });
+
+  const [validationResults, setValidationResults] = useState<Record<string, ToolValidationResult | null>>({
+    vtex: null,
+    gsc: null,
+    ga4: null,
+    geo: null,
+  });
 
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [saveSuccessNotice, setSaveSuccessNotice] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -65,52 +76,80 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
     setTimeout(() => setCopiedText(null), 2000);
   };
 
-  const handleTestVtex = async () => {
-    setIsTestingVtex(true);
-    setVtexTestStatus(null);
+  const handleValidateTool = async (tool: 'vtex' | 'gsc' | 'ga4' | 'geo') => {
+    setIsValidating((prev) => ({ ...prev, [tool]: true }));
+
+    let configPayload: Record<string, any> = { storeDomain };
+
+    if (tool === 'vtex') {
+      configPayload = { accountName, appKey, appToken, environment, storeDomain };
+    } else if (tool === 'gsc') {
+      configPayload = { searchConsoleProperty: gscProperty, storeDomain };
+    } else if (tool === 'ga4') {
+      configPayload = { ga4MeasurementId: ga4Measurement, ga4PropertyId: ga4Property, storeDomain };
+    } else if (tool === 'geo') {
+      configPayload = { storeDomain };
+    }
 
     try {
-      const res = await fetch('/api/vtex/test-connection', {
+      const res = await fetch('/api/tools/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          accountName,
-          appKey,
-          appToken,
-          environment,
+          tool,
+          config: configPayload,
         }),
       });
 
       const data = await res.json();
-      setVtexTestStatus({
-        success: data.success,
-        message: data.message,
-        details: data.data,
-      });
+      if (data.success && data.result) {
+        setValidationResults((prev) => ({ ...prev, [tool]: data.result }));
 
-      if (data.success) {
-        onSaveVtexConfig({
-          accountName,
-          appKey,
-          appToken,
-          environment,
-          storeDomain,
-          isConnected: true,
-          lastConnectedAt: new Date().toLocaleString('pt-BR'),
-          vtexVersion: data.data?.vtexVersion || 'VTEX IO',
-        });
+        // Auto sync if valid
+        if (tool === 'vtex' && data.result.isValid) {
+          onSaveVtexConfig({
+            accountName,
+            appKey,
+            appToken,
+            environment,
+            storeDomain,
+            isConnected: true,
+            lastConnectedAt: new Date().toLocaleString('pt-BR'),
+            vtexVersion: 'VTEX CMS Legacy (Portal)',
+          });
+        } else if ((tool === 'gsc' || tool === 'ga4') && data.result.isValid) {
+          onSaveGoogleConfig({
+            searchConsoleProperty: gscProperty,
+            searchConsoleConnected: Boolean(gscProperty),
+            ga4PropertyId: ga4Property,
+            ga4MeasurementId: ga4Measurement,
+            ga4Connected: Boolean(ga4Measurement),
+          });
+        }
       }
     } catch (err: unknown) {
-      setVtexTestStatus({
-        success: false,
-        message: 'Falha ao testar conexão com o servidor local.',
-      });
+      console.error(`Erro ao validar ${tool}:`, err);
     } finally {
-      setIsTestingVtex(false);
+      setIsValidating((prev) => ({ ...prev, [tool]: false }));
     }
   };
 
-  const handleSaveGoogle = () => {
+  const handleSaveVtexManual = () => {
+    onSaveVtexConfig({
+      accountName,
+      appKey,
+      appToken,
+      environment,
+      storeDomain,
+      isConnected: Boolean(accountName && appKey && appToken),
+      lastConnectedAt: new Date().toLocaleString('pt-BR'),
+      vtexVersion: 'VTEX CMS Legacy (Portal)',
+    });
+    setSaveSuccessNotice('Configurações da VTEX salvas com sucesso!');
+    setTimeout(() => setSaveSuccessNotice(null), 3000);
+  };
+
+  const handleSaveGoogleManual = () => {
     onSaveGoogleConfig({
       searchConsoleProperty: gscProperty,
       searchConsoleConnected: Boolean(gscProperty),
@@ -118,7 +157,81 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
       ga4MeasurementId: ga4Measurement,
       ga4Connected: Boolean(ga4Measurement),
     });
-    alert('Configurações do Google Search Console e GA4 salvas com sucesso!');
+    setSaveSuccessNotice('Configurações do Google (GSC & GA4) salvas com sucesso!');
+    setTimeout(() => setSaveSuccessNotice(null), 3000);
+  };
+
+  // Diagnostic Checklist Component
+  const renderValidationReport = (tool: 'vtex' | 'gsc' | 'ga4' | 'geo') => {
+    const result = validationResults[tool];
+    if (!result) return null;
+
+    return (
+      <div
+        className={`p-4 rounded-xl border space-y-3 transition-all ${
+          result.isValid
+            ? 'bg-emerald-950/20 border-emerald-500/40'
+            : 'bg-rose-950/20 border-rose-500/40'
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {result.isValid ? (
+              <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+            ) : (
+              <XCircle className="w-5 h-5 text-rose-400 shrink-0" />
+            )}
+            <div>
+              <h4 className="text-xs font-bold text-white">
+                {result.isValid
+                  ? 'Vínculo Ativo & Conexão Validada com Sucesso!'
+                  : 'Atenção: Falha ou Pendência na Validação do Vínculo'}
+              </h4>
+              <p className="text-[11px] text-slate-300">{result.summary}</p>
+            </div>
+          </div>
+
+          {result.latencyMs !== undefined && (
+            <span className="px-2 py-0.5 text-[10px] font-mono bg-slate-900 border border-slate-700 text-slate-300 rounded-full">
+              {result.latencyMs}ms de resposta
+            </span>
+          )}
+        </div>
+
+        {/* Detailed Checks Checklist */}
+        <div className="pt-2 border-t border-slate-800 space-y-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+            Diagnóstico Granular de Vínculo:
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {result.checks.map((check, idx) => (
+              <div
+                key={idx}
+                className="p-2.5 rounded-lg bg-slate-900/90 border border-slate-800 flex items-start gap-2 text-xs"
+              >
+                {check.status === 'passed' && (
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                )}
+                {check.status === 'warning' && (
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                )}
+                {check.status === 'failed' && (
+                  <XCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-slate-200 block text-[11px]">
+                    {check.name}
+                  </span>
+                  <span className="text-[10px] text-slate-400 leading-tight block">
+                    {check.detail}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -137,10 +250,10 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
             </div>
             <div>
               <h2 id="setup-modal-title" className="text-base font-bold text-white">
-                Assistente Central de Configuração & Chaves
+                Assistente Central de Configuração & Validação de Vínculos
               </h2>
               <p className="text-xs text-slate-400">
-                Guia prático para conectar sua VTEX, Search Console, GA4 e otimização para IAs (GEO).
+                Conecte e teste em tempo real o vínculo da sua loja VTEX CMS Legacy, Search Console, GA4 e IAs (GEO).
               </p>
             </div>
           </div>
@@ -153,6 +266,14 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Global Save Notice */}
+        {saveSuccessNotice && (
+          <div className="px-6 py-2 bg-emerald-950/60 border-b border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 shrink-0" />
+            <span>{saveSuccessNotice}</span>
+          </div>
+        )}
 
         {/* Sub Navigation Tabs */}
         <div className="flex items-center gap-1 px-6 pt-3 border-b border-slate-800 bg-slate-950/40 overflow-x-auto">
@@ -167,7 +288,7 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
             <Key className="w-3.5 h-3.5" />
             <span>1. VTEX (KEY & TOKEN)</span>
             {vtexConfig.isConnected && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="w-2 h-2 rounded-full bg-emerald-400 ml-1" title="Vínculo Ativo" />
             )}
           </button>
 
@@ -175,31 +296,37 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
             onClick={() => setActiveSubTab('gsc')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
               activeSubTab === 'gsc'
-                ? 'border-pink-500 text-pink-400'
+                ? 'border-blue-500 text-blue-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Search className="w-3.5 h-3.5" />
             <span>2. Google Search Console</span>
+            {googleConfig.searchConsoleConnected && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 ml-1" title="Vínculo Ativo" />
+            )}
           </button>
 
           <button
             onClick={() => setActiveSubTab('ga4')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
               activeSubTab === 'ga4'
-                ? 'border-pink-500 text-pink-400'
+                ? 'border-amber-500 text-amber-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>3. Google Analytics 4 (GA4)</span>
+            {googleConfig.ga4Connected && (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 ml-1" title="Vínculo Ativo" />
+            )}
           </button>
 
           <button
             onClick={() => setActiveSubTab('geo')}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
               activeSubTab === 'geo'
-                ? 'border-pink-500 text-pink-400'
+                ? 'border-purple-500 text-purple-400'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -216,11 +343,11 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
               <div className="p-4 rounded-xl border border-pink-500/30 bg-pink-950/10 space-y-1">
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-pink-400" />
-                  <span>Conexão Direta com sua Conta VTEX</span>
+                  <span>Conexão Direta com sua Conta VTEX CMS Legacy</span>
                 </h3>
                 <p className="text-xs text-slate-300">
-                  Insira abaixo as credenciais geradas no License Manager da VTEX. Nosso dashboard utiliza
-                  essas chaves para ler o catálogo, consultas do Intelligent Search e pedidos do OMS.
+                  Insira abaixo as credenciais geradas no License Manager da VTEX. O sistema validará se a AppKey e
+                  AppToken estão conectando corretamente à API de Catálogo e OMS da sua loja.
                 </p>
               </div>
 
@@ -237,7 +364,7 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-pink-500"
                   />
                   <span className="text-[11px] text-slate-400 mt-0.5 block">
-                    O nome que aparece na URL: <code className="text-slate-300">{accountName || 'sualoja'}.myvtex.com</code>
+                    URL base: <code className="text-slate-300">{accountName || 'sualoja'}.myvtex.com</code>
                   </span>
                 </div>
 
@@ -283,7 +410,7 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
 
                 <div className="md:col-span-2">
                   <label className="block text-xs font-medium text-slate-300 mb-1">
-                    Domínio da Loja em Produção
+                    Domínio da Loja em Produção (URL Canônica)
                   </label>
                   <input
                     type="text"
@@ -295,52 +422,45 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                 </div>
               </div>
 
-              {/* Test Button & Result */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-2">
                 <button
-                  onClick={handleTestVtex}
-                  disabled={isTestingVtex || !accountName || !appKey || !appToken}
+                  onClick={() => handleValidateTool('vtex')}
+                  disabled={isValidating.vtex || !accountName || !appKey || !appToken}
                   className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-pink-600 hover:bg-pink-500 disabled:opacity-50 rounded-lg shadow-sm transition-all"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isTestingVtex ? 'animate-spin' : ''}`} />
-                  <span>{isTestingVtex ? 'Testando Conexão...' : 'Testar Conexão em Tempo Real'}</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${isValidating.vtex ? 'animate-spin' : ''}`} />
+                  <span>{isValidating.vtex ? 'Validando Vínculo...' : 'Validar Conexão VTEX Agora'}</span>
                 </button>
 
-                {vtexTestStatus && (
-                  <div
-                    className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
-                      vtexTestStatus.success
-                        ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-rose-950/40 text-rose-300 border border-rose-500/40'
-                    }`}
-                  >
-                    {vtexTestStatus.success ? (
-                      <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                    ) : (
-                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-                    )}
-                    <span>{vtexTestStatus.message}</span>
-                  </div>
-                )}
+                <button
+                  onClick={handleSaveVtexManual}
+                  className="px-4 py-2.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Salvar Sem Testar
+                </button>
               </div>
 
-              {/* Step by step tutorial for VTEX Key */}
+              {/* Diagnostic Card */}
+              {renderValidationReport('vtex')}
+
+              {/* Instructions */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <h4 className="text-xs font-bold text-slate-200">
-                  Onde encontrar ou gerar sua Key e Token no Admin da VTEX:
+                  Como gerar uma Chave com as permissões corretas no Admin VTEX:
                 </h4>
                 <ol className="space-y-2 text-xs text-slate-300 list-decimal list-inside">
                   <li>
-                    Acesse o Admin VTEX em <code className="text-pink-400 font-mono">https://sualoja.myvtex.com/admin</code>.
+                    Acesse o Admin VTEX em <code className="text-pink-400 font-mono">https://{accountName || 'sualoja'}.myvtex.com/admin</code>.
                   </li>
                   <li>
-                    No menu lateral esquerdo, vá em <strong>Configurações da Conta &gt; Gerenciamento de Contas &gt; Chaves de aplicação</strong> (ou busque por "Chaves de aplicação").
+                    Vá em <strong>Configurações da Conta &gt; Gerenciamento de Contas &gt; Chaves de aplicação</strong>.
                   </li>
                   <li>
-                    Clique em <strong>Gerenciar chaves</strong> e depois em <strong>Gerar chave</strong>.
+                    Clique em <strong>Gerenciar chaves</strong> &gt; <strong>Gerar chave</strong>.
                   </li>
                   <li>
-                    Dê um rótulo como "Dashboard VTEX Pulse" e atribua o perfil de acesso com permissão para <strong>Catalog (Leitura)</strong> e <strong>OMS (Leitura de Pedidos)</strong>.
+                    Defina um rótulo (ex: "Dashboard VTEX Pulse") e adicione os perfis <strong>Catalog (Leitura)</strong> e <strong>OMS (Leitura de Pedidos)</strong>.
                   </li>
                   <li>
                     Copie a <strong>Chave de Aplicação (AppKey)</strong> e o <strong>Segredo (AppToken)</strong> gerado.
@@ -356,11 +476,10 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
               <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-950/10 space-y-1">
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                   <Search className="w-4 h-4 text-blue-400" />
-                  <span>Configuração do Google Search Console para VTEX</span>
+                  <span>Configuração & Validação do Google Search Console</span>
                 </h3>
                 <p className="text-xs text-slate-300">
-                  O Search Console fornece a verdade sobre impressões, termos de busca e falhas de indexação
-                  de URLs e sitemaps do seu e-commerce.
+                  O Search Console monitora impressões orgânicas, palavras-chave e sitemaps do seu e-commerce VTEX CMS Legacy.
                 </p>
               </div>
 
@@ -375,27 +494,52 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                   onChange={(e) => setGscProperty(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
                 />
+                <span className="text-[11px] text-slate-400 mt-1 block">
+                  Recomendado: utilize <code className="text-blue-300">sc-domain:{storeDomain || 'minhaloja.com.br'}</code> para monitorar todos os protocolos e subdomínios da loja.
+                </span>
               </div>
 
-              {/* 3 Methods */}
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button
+                  onClick={() => handleValidateTool('gsc')}
+                  disabled={isValidating.gsc || !gscProperty}
+                  className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg shadow-sm transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isValidating.gsc ? 'animate-spin' : ''}`} />
+                  <span>{isValidating.gsc ? 'Validando Vínculo...' : 'Validar Vínculo com Search Console'}</span>
+                </button>
+
+                <button
+                  onClick={handleSaveGoogleManual}
+                  className="px-4 py-2.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Salvar Propriedade
+                </button>
+              </div>
+
+              {/* Diagnostic Card */}
+              {renderValidationReport('gsc')}
+
+              {/* Step-by-Step for VTEX CMS Legacy */}
               <div className="space-y-4">
                 <h4 className="text-xs font-bold text-slate-200">
-                  Escolha um dos 3 métodos para vincular o Search Console à sua loja VTEX:
+                  Métodos de Vínculo de Propriedade no VTEX CMS Legacy:
                 </h4>
 
-                {/* Method 1 */}
+                {/* Method 1: DNS */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-400">
                       Método 1: Registro DNS TXT (Recomendado para VTEX)
                     </span>
-                    <span className="text-[10px] text-slate-400">Verificação de todo o domínio</span>
+                    <span className="text-[10px] text-slate-400">Verificação de domínio completo</span>
                   </div>
                   <p className="text-xs text-slate-300">
-                    Acesse seu provedor de DNS (ex: Cloudflare, Registro.br, Route53) e crie uma entrada:
+                    No seu provedor de DNS (Cloudflare, Registro.br, etc.), adicione uma entrada TXT:
                   </p>
                   <div className="p-2.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
-                    <span>Tipo: TXT | Nome: @ | Valor: google-site-verification=exemploDeCodigoGSC12345</span>
+                    <span>Tipo: TXT | Host: @ | Valor: google-site-verification=exemploDeCodigoGSC12345</span>
                     <button
                       onClick={() => handleCopy('google-site-verification=exemploDeCodigoGSC12345', 'dns')}
                       className="text-pink-400 text-xs hover:text-pink-300"
@@ -405,21 +549,21 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                   </div>
                 </div>
 
-                {/* Method 2 */}
+                {/* Method 2: Subtemplate Head */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-blue-400">
-                      Método 2: Tag Meta HTML no VTEX IO
+                      Método 2: Tag Meta HTML no Subtemplate Head do Portal Legacy
                     </span>
-                    <span className="text-[10px] text-slate-400">Direto no Storefront</span>
+                    <span className="text-[10px] text-slate-400">CMS &gt; Layout &gt; Subtemplates</span>
                   </div>
                   <p className="text-xs text-slate-300">
-                    Insira a tag no arquivo <code className="text-pink-400">store/blocks/header.jsonc</code> ou via Google Tag Manager:
+                    Acesse <strong>CMS &gt; Layout &gt; HTML Templates &gt; Subtemplates &gt; head</strong> e insira dentro da tag &lt;head&gt;:
                   </p>
                   <div className="p-2.5 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 flex items-center justify-between">
-                    <span>&lt;meta name="google-site-verification" content="SEU_CODIGO_AQUI" /&gt;</span>
+                    <span>&lt;meta name="google-site-verification" content="SEU_CODIGO_GSC" /&gt;</span>
                     <button
-                      onClick={() => handleCopy('<meta name="google-site-verification" content="SEU_CODIGO_AQUI" />', 'meta')}
+                      onClick={() => handleCopy('<meta name="google-site-verification" content="SEU_CODIGO_GSC" />', 'meta')}
                       className="text-pink-400 text-xs hover:text-pink-300"
                     >
                       {copiedText === 'meta' ? 'Copiado!' : 'Copiar'}
@@ -427,25 +571,18 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                   </div>
                 </div>
 
-                {/* Method 3 */}
+                {/* Method 3: Sitemap */}
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                   <span className="text-xs font-bold text-slate-200">
-                    Onde submeter o Sitemap da VTEX no GSC:
+                    Índice de Sitemaps da VTEX:
                   </span>
                   <p className="text-xs text-slate-300">
-                    Na VTEX, o índice de sitemaps é gerado automaticamente na URL:{' '}
-                    <code className="text-emerald-400 font-mono">https://www.sualoja.com.br/sitemap.xml</code>.
-                    Basta colar essa URL na aba <strong>Sitemaps</strong> do Google Search Console.
+                    No CMS Legacy, o sitemap index oficial fica na URL:{' '}
+                    <code className="text-emerald-400 font-mono">https://{storeDomain || 'www.sualoja.com.br'}/sitemap.xml</code>.
+                    Submeta essa URL diretamente no menu <strong>Sitemaps</strong> do Search Console.
                   </p>
                 </div>
               </div>
-
-              <button
-                onClick={handleSaveGoogle}
-                className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors"
-              >
-                Salvar Configurações GSC
-              </button>
             </div>
           )}
 
@@ -455,11 +592,10 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
               <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-950/10 space-y-1">
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                   <BarChart3 className="w-4 h-4 text-amber-400" />
-                  <span>Configuração do Google Analytics 4 (GA4)</span>
+                  <span>Configuração & Validação do Google Analytics 4 (GA4)</span>
                 </h3>
                 <p className="text-xs text-slate-300">
-                  O GA4 é responsável por medir o tráfego de usuários, origens de campanha e funis de conversão
-                  em perfeita sintonia com os pedidos faturados pela VTEX.
+                  Valide se o Measurement ID e a Camada de Dados (dataLayer) do CMS Legacy estão prontos para medir sessões e pedidos.
                 </p>
               </div>
 
@@ -476,7 +612,7 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
                   />
                   <span className="text-[11px] text-slate-400 mt-0.5 block">
-                    Encontrado em: Admin GA4 &gt; Fluxos de dados &gt; Web &gt; ID da métrica.
+                    Formato: <code className="text-amber-400">G-XXXXXXXXXX</code> (Admin GA4 &gt; Fluxos de dados).
                   </span>
                 </div>
 
@@ -486,7 +622,7 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="ex: properties/412891920"
+                    placeholder="ex: properties/412891920 ou 412891920"
                     value={ga4Property}
                     onChange={(e) => setGa4Property(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 font-mono"
@@ -494,30 +630,45 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                 </div>
               </div>
 
-              {/* VTEX GTM Integration guide */}
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button
+                  onClick={() => handleValidateTool('ga4')}
+                  disabled={isValidating.ga4 || !ga4Measurement}
+                  className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 disabled:opacity-50 rounded-lg shadow-sm transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isValidating.ga4 ? 'animate-spin' : ''}`} />
+                  <span>{isValidating.ga4 ? 'Validando Vínculo...' : 'Validar Vínculo com GA4 & dataLayer'}</span>
+                </button>
+
+                <button
+                  onClick={handleSaveGoogleManual}
+                  className="px-4 py-2.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Salvar IDs do GA4
+                </button>
+              </div>
+
+              {/* Diagnostic Card */}
+              {renderValidationReport('ga4')}
+
+              {/* VTEX CMS Legacy GTM / GA4 Setup Guide */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <h4 className="text-xs font-bold text-slate-200">
-                  Como ativar o GA4 nativamente no VTEX IO:
+                  Implementação no VTEX CMS Legacy (Portal):
                 </h4>
                 <ol className="space-y-2 text-xs text-slate-300 list-decimal list-inside">
                   <li>
-                    Instale o app oficial da VTEX: <code className="text-pink-400 font-mono">vtex.google-tag-manager</code> no seu workspace ou admin da VTEX.
+                    Acesse <strong>CMS &gt; Layout &gt; HTML Templates &gt; Subtemplates &gt; head</strong> e insira o script do container GTM.
                   </li>
                   <li>
-                    Em <strong>Admin VTEX &gt; Storefront &gt; Apps &gt; Google Tag Manager</strong>, cole o seu container GTM (ex: GTM-XXXXXX).
+                    No container GTM, crie a <strong>Tag do Google</strong> configurada com seu Measurement ID (<code className="text-amber-400 font-mono">{ga4Measurement || 'G-XXXXXXXXXX'}</code>).
                   </li>
                   <li>
-                    O app da VTEX dispara automaticamente os eventos do dataLayer recomendados pelo GA4 para e-commerce: <code className="text-amber-400 font-mono">view_item</code>, <code className="text-amber-400 font-mono">add_to_cart</code>, <code className="text-amber-400 font-mono">begin_checkout</code> e <code className="text-amber-400 font-mono">purchase</code>.
+                    No checkout da VTEX (<strong>/arquivos/checkout6-custom.js</strong>), confirme que os disparos de conversão utilizam o gatilho de sucesso do pedido do <code>vtexjs</code>.
                   </li>
                 </ol>
               </div>
-
-              <button
-                onClick={handleSaveGoogle}
-                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors"
-              >
-                Salvar Configurações GA4
-              </button>
             </div>
           )}
 
@@ -527,24 +678,39 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
               <div className="p-4 rounded-xl border border-purple-500/30 bg-purple-950/10 space-y-1">
                 <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
                   <Bot className="w-4 h-4 text-purple-400" />
-                  <span>Configuração para GEO (Generative Engine Optimization)</span>
+                  <span>Validação de Vínculos GEO (Generative Engine Optimization)</span>
                 </h3>
                 <p className="text-xs text-slate-300">
-                  Garanta que motores de IA generativa (ChatGPT Search, Perplexity e Google AI Overviews) consigam
-                  acessar o catálogo da sua loja sem serem bloqueados no robots.txt da VTEX.
+                  Valide se os motores de IA generativa (ChatGPT Search, Perplexity e Google AI Overviews) têm permissão
+                  para rastrear e citar sua loja VTEX CMS Legacy.
                 </p>
               </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => handleValidateTool('geo')}
+                  disabled={isValidating.geo}
+                  className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 rounded-lg shadow-sm transition-all"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isValidating.geo ? 'animate-spin' : ''}`} />
+                  <span>{isValidating.geo ? 'Auditando Diretivas...' : 'Validar Vínculo GEO & Rastreadores IA'}</span>
+                </button>
+              </div>
+
+              {/* Diagnostic Card */}
+              {renderValidationReport('geo')}
 
               {/* Robots.txt block */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-200">
-                    Regras recomendadas para o robots.txt na VTEX:
+                    Diretivas recomendadas para o robots.txt no Portal VTEX Legacy:
                   </span>
                   <button
                     onClick={() =>
                       handleCopy(
-                        `User-agent: GPTBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\nSitemap: https://www.sualoja.com.br/sitemap.xml`,
+                        `User-agent: GPTBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nUser-agent: Google-Extended\nAllow: /\n\n# Evitar indexação de rotas privadas:\nDisallow: /checkout/\nDisallow: /account/\nDisallow: /search?*\n\nSitemap: https://${storeDomain || 'www.sualoja.com.br'}/sitemap.xml`,
                         'robots'
                       )
                     }
@@ -555,7 +721,7 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                   </button>
                 </div>
 
-                <pre className="p-3 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 leading-relaxed">
+                <pre className="p-3 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-slate-300 leading-relaxed overflow-x-auto">
 {`User-agent: GPTBot
 Allow: /
 
@@ -565,23 +731,24 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-# Evitar que IAs indexem carrinhos ou checkout:
+# Evitar indexação de rotas privadas:
 Disallow: /checkout/
 Disallow: /account/
 Disallow: /search?*
 
-Sitemap: https://www.sualoja.com.br/sitemap.xml`}
+Sitemap: https://${storeDomain || 'www.sualoja.com.br'}/sitemap.xml`}
                 </pre>
               </div>
 
-              {/* llms.txt guide */}
+              {/* llms.txt guide for CMS Legacy */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs text-slate-300">
                 <span className="font-bold text-slate-200 block">
-                  Publicação do arquivo llms.txt na VTEX:
+                  Publicação do arquivo llms.txt no VTEX CMS Legacy:
                 </span>
                 <p>
-                  Você pode gerar o arquivo diretamente na aba <strong>GEO (IA Search)</strong> deste dashboard
-                  e salvá-lo no Gerenciador de Arquivos Estáticos da VTEX ou adicioná-lo na pasta estática do seu tema VTEX IO.
+                  1. Gere o conteúdo do arquivo na aba <strong>GEO (IA)</strong> deste painel.<br />
+                  2. Acesse o Admin VTEX &gt; <strong>CMS &gt; Layout &gt; Gerenciador de Arquivos</strong> (Files) e faça upload do arquivo <code>llms.txt</code>.<br />
+                  3. No <strong>CMS &gt; Gerenciador de URL</strong>, adicione uma regra de redirecionamento 301 da URL raiz <code>/llms.txt</code> apontando para <code>/arquivos/llms.txt</code>.
                 </p>
               </div>
             </div>

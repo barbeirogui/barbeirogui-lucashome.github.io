@@ -256,8 +256,7 @@ export const GeoTab: React.FC = () => {
         <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-400 flex items-start gap-2">
           <HelpCircle className="w-4 h-4 text-pink-400 shrink-0 mt-0.5" />
           <span>
-            <strong>Como publicar na VTEX:</strong> Faça upload do arquivo como <code className="text-slate-200">llms.txt</code> no
-            gerenciador de arquivos estáticos da VTEX (ou rota de Rewrites personalizada no VTEX IO) para ficar disponível em <code className="text-slate-200">https://seusite.com.br/llms.txt</code>.
+            <strong>Como publicar no VTEX CMS Legacy:</strong> Acesse Admin VTEX &gt; CMS &gt; Layout &gt; Gerenciador de Arquivos (Files Manager) e faça upload de <code className="text-slate-200">llms.txt</code> (ficando em <code className="text-slate-200">/arquivos/llms.txt</code>). Em seguida, no <strong>CMS &gt; Gerenciador de URL</strong>, crie um redirecionamento 301 da rota raiz <code className="text-slate-200">/llms.txt</code> para <code className="text-slate-200">/arquivos/llms.txt</code>.
           </span>
         </div>
       </div>

@@ -6,6 +6,7 @@ import {
   Sparkles,
   Zap,
   Activity,
+  Bot,
 } from 'lucide-react';
 import { MetricPoint, calculateStoreHealthScore, calculateConversionOpportunity } from '../utils/metricsEngine';
 import { MetricCard } from './MetricCard';
@@ -72,7 +73,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-pink-400">Auditoria Executiva Centralizada</span>
             <span className="text-xs text-slate-500" aria-hidden="true">·</span>
-            <span className="text-xs text-slate-400">VTEX CMS + GSC + GA4 + GEO</span>
+            <span className="text-xs text-slate-400">VTEX CMS Legacy (Portal) + GSC + GA4 + GEO</span>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Saúde & Potencial de Conversão do E-commerce
@@ -90,6 +91,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Ver Sugestões de IA para Conversão</span>
+            </button>
+            <button
+              onClick={() => onNavigateTab('chat')}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-slate-200 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700"
+            >
+              <Bot className="w-3.5 h-3.5 text-pink-400" />
+              <span>Consultar Especialista IA (Chat)</span>
             </button>
             <button
               onClick={() => onNavigateTab('alerts')}

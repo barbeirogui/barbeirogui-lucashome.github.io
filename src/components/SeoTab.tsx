@@ -20,40 +20,56 @@ export const SeoTab: React.FC = () => {
     return i.type === selectedIssueCategory;
   });
 
-  const sampleVtexSchema = `{
-  "@context": "https://schema.org/",
-  "@type": "Product",
-  "name": "Tênis Esportivo Pro Runner Masculino",
-  "image": [
-    "https://lojamoda.vtexassets.com/arquivos/ids/156420/tenis-pro-runner-1.jpg"
-  ],
-  "description": "Tênis com amortecimento responsivo e tecido respirável para corrida de alta performance.",
-  "sku": "SKU-992140",
-  "mpn": "PRORUN-2026",
-  "brand": {
-    "@type": "Brand",
-    "name": "AeroSport"
-  },
-  "aggregateRating": {
-    "@type": "AggregateRating",
-    "ratingValue": "4.8",
-    "reviewCount": "128",
-    "bestRating": "5"
-  },
-  "offers": {
-    "@type": "Offer",
-    "url": "https://www.lojamoda.com.br/tenis-esportivo-pro-runner/p",
-    "priceCurrency": "BRL",
-    "price": "349.90",
-    "priceValidUntil": "2027-12-31",
-    "itemCondition": "https://schema.org/NewCondition",
-    "availability": "https://schema.org/InStock",
-    "seller": {
-      "@type": "Organization",
-      "name": "Loja Moda Oficial"
-    }
+  const sampleVtexSchema = `<script>
+/**
+ * Injeção de Schema.org Product para VTEX CMS Legacy (Portal)
+ * Adicionar no Subtemplate de PDP (CMS > Layout > HTML Templates > Subtemplates)
+ */
+$(document).ready(function() {
+  if (typeof skuJson !== 'undefined' && skuJson.skus && skuJson.skus.length > 0) {
+    var primarySku = skuJson.skus[0];
+    var priceFormatted = (primarySku.bestPrice / 100).toFixed(2);
+    
+    var productLdJson = {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": skuJson.name,
+      "image": [primarySku.image],
+      "description": $('meta[name="description"]').attr('content') || skuJson.name,
+      "sku": String(primarySku.id),
+      "mpn": String(skuJson.productId),
+      "brand": {
+        "@type": "Brand",
+        "name": $("meta[name='brand']").attr("content") || "Loja Oficial"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "128",
+        "bestRating": "5"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": window.location.href.split('?')[0],
+        "priceCurrency": "BRL",
+        "price": priceFormatted,
+        "priceValidUntil": "2027-12-31",
+        "itemCondition": "https://schema.org/NewCondition",
+        "availability": primarySku.available ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+        "seller": {
+          "@type": "Organization",
+          "name": "Loja Moda Brasil"
+        }
+      }
+    };
+
+    var scriptTag = document.createElement('script');
+    scriptTag.type = 'application/ld+json';
+    scriptTag.text = JSON.stringify(productLdJson, null, 2);
+    document.head.appendChild(scriptTag);
   }
-}`;
+});
+</script>`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -67,14 +83,14 @@ export const SeoTab: React.FC = () => {
       <div>
         <div className="flex items-center gap-2 text-xs text-pink-400 font-medium">
           <Globe className="w-3.5 h-3.5" />
-          <span>SEO TÉCNICO & CORE WEB VITALS</span>
+          <span>SEO TÉCNICO & CORE WEB VITALS (VTEX CMS LEGACY)</span>
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-white mt-1">
-          Otimização de Rastreabilidade, Velocidade & Schema no VTEX CMS
+          Otimização de Rastreabilidade, Velocidade & Schema no VTEX CMS Legacy
         </h1>
         <p className="text-xs text-slate-300 mt-1 max-w-3xl">
-          Auditoria completa de parâmetros de URL da VTEX, redirecionamentos em loop no URL Builder,
-          rich snippets para o Google e métricas de velocidade que impactam ranqueamento e conversão.
+          Auditoria de subtemplates HTML do Portal, scripts em /arquivos/, redirecionamentos 301 no Gerenciador de URL
+          e injeção de dados estruturados Schema.org via objeto nativo skuJson.
         </p>
       </div>
 
@@ -83,7 +99,7 @@ export const SeoTab: React.FC = () => {
         <div className="flex items-center justify-between pb-2 border-b border-slate-800">
           <h2 className="text-base font-semibold text-white flex items-center gap-2">
             <Gauge className="w-4 h-4 text-pink-400" />
-            <span>Métricas de Experiência na Página (Core Web Vitals - VTEX IO)</span>
+            <span>Métricas de Experiência na Página (Core Web Vitals - VTEX CMS Legacy)</span>
           </h2>
           <span className="text-xs text-slate-400">Origem: Google CrUX / PageSpeed Insights</span>
         </div>
@@ -254,10 +270,10 @@ export const SeoTab: React.FC = () => {
           <div>
             <h2 className="text-base font-semibold text-white flex items-center gap-2">
               <FileCode className="w-4 h-4 text-pink-400" />
-              <span>Gerador de JSON-LD Recomendado para PDP VTEX (Estrelas & Preço)</span>
+              <span>Gerador de Script JSON-LD para Subtemplate de PDP no CMS Legacy (skuJson)</span>
             </h2>
             <p className="text-xs text-slate-400">
-              Copie o código abaixo e adicione ao seu bloco customizado de produto no VTEX IO para ativar Rich Snippets imediatos no Google.
+              Copie o código abaixo e adicione ao seu Subtemplate de Produto (CMS &gt; Layout &gt; HTML Templates &gt; Subtemplates) para ativar Rich Snippets imediatos no Google consumindo o objeto skuJson nativo da VTEX.
             </p>
           </div>
 

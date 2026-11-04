@@ -122,7 +122,7 @@ export function detectSuddenDrops(
       } else if (metric.id === 'lcp_vitals') {
         severity = comp.deltaPercent > 40 ? 'critical' : 'warning';
         actionSuggestion =
-          'Otimizar imagens de banner no VTEX CMS, ativar formato WebP/AVIF e adiar scripts pesados no VTEX IO.';
+          'Otimizar imagens de banner no VTEX CMS, ativar WebP dinâmico na CDN VTEX e adiar scripts secundários em /arquivos/ do Portal Legacy.';
       } else if (metric.id === 'cart_abandonment') {
         estimatedLoss = Math.round(monthlyRevenueBRL * 0.15 * (Math.abs(comp.deltaPercent) / 100));
         actionSuggestion =

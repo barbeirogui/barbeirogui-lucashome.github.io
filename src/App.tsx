@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Header, TabType } from './components/Header';
+import { Sidebar, TabType } from './components/Sidebar';
+import { Topbar } from './components/Topbar';
 import { OverviewTab } from './components/OverviewTab';
+import { SitemapUrlBuilderTab } from './components/SitemapUrlBuilderTab';
 import { SeoTab } from './components/SeoTab';
 import { GeoTab } from './components/GeoTab';
 import { SearchConsoleTab } from './components/SearchConsoleTab';
@@ -8,6 +10,7 @@ import { AnalyticsTab } from './components/AnalyticsTab';
 import { AiOptimizationsTab } from './components/AiOptimizationsTab';
 import { MonthlyReportTab } from './components/MonthlyReportTab';
 import { AlertsTab } from './components/AlertsTab';
+import { ChatbotTab } from './components/ChatbotTab';
 import { SetupAssistantModal } from './components/SetupAssistantModal';
 
 import {
@@ -20,6 +23,7 @@ import { OptimizationSuggestion, VtexConfig, GoogleConfig } from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [dropThreshold, setDropThreshold] = useState<number>(12);
 
@@ -101,76 +105,102 @@ export default function App() {
   const unreadAlertsCount = alerts.filter((a) => !a.resolved && !a.acknowledged).length;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-pink-500 selection:text-white">
-      {/* Top Header */}
-      <Header
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans selection:bg-pink-500 selection:text-white">
+      {/* Collapsible Sidebar Navigation */}
+      <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        isCollapsed={isSidebarCollapsed}
+        setIsCollapsed={setIsSidebarCollapsed}
         unreadAlertsCount={unreadAlertsCount}
         onOpenSetup={() => setIsSetupOpen(true)}
         storeName={vtexConfig.accountName}
       />
 
-      {/* Main Content Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'overview' && (
-          <OverviewTab
-            metrics={metrics}
-            onNavigateTab={setActiveTab}
-            onOpenSetup={() => setIsSetupOpen(true)}
-            isVtexConnected={vtexConfig.isConnected}
-          />
-        )}
+      {/* Main Content Area offset by Sidebar */}
+      <div
+        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${
+          isSidebarCollapsed ? 'pl-20' : 'pl-64'
+        }`}
+      >
+        {/* Topbar */}
+        <Topbar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isCollapsed={isSidebarCollapsed}
+          setIsCollapsed={setIsSidebarCollapsed}
+          unreadAlertsCount={unreadAlertsCount}
+          onOpenSetup={() => setIsSetupOpen(true)}
+          storeName={vtexConfig.accountName}
+        />
 
-        {activeTab === 'seo' && <SeoTab />}
+        {/* Main Content Viewport */}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {activeTab === 'overview' && (
+            <OverviewTab
+              metrics={metrics}
+              onNavigateTab={setActiveTab}
+              onOpenSetup={() => setIsSetupOpen(true)}
+              isVtexConnected={vtexConfig.isConnected}
+            />
+          )}
 
-        {activeTab === 'geo' && <GeoTab />}
+          {activeTab === 'sitemap-urls' && (
+            <SitemapUrlBuilderTab storeDomain={vtexConfig.storeDomain} />
+          )}
 
-        {activeTab === 'gsc' && <SearchConsoleTab />}
+          {activeTab === 'seo' && <SeoTab />}
 
-        {activeTab === 'analytics' && <AnalyticsTab />}
+          {activeTab === 'geo' && <GeoTab />}
 
-        {activeTab === 'ai-suggestions' && (
-          <AiOptimizationsTab
-            suggestions={suggestions}
-            onRefreshAi={fetchAiOptimizations}
-            isLoadingAi={isLoadingAi}
-            onUpdateStatus={handleUpdateSuggestionStatus}
-            aiSource={aiSource}
-          />
-        )}
+          {activeTab === 'gsc' && <SearchConsoleTab />}
 
-        {activeTab === 'monthly-reports' && <MonthlyReportTab />}
+          {activeTab === 'analytics' && <AnalyticsTab />}
 
-        {activeTab === 'alerts' && (
-          <AlertsTab
-            alerts={alerts}
-            onAcknowledgeAlert={handleAcknowledgeAlert}
-            onResolveAlert={handleResolveAlert}
-            dropThreshold={dropThreshold}
-            setDropThreshold={setDropThreshold}
-          />
-        )}
-      </main>
+          {activeTab === 'ai-suggestions' && (
+            <AiOptimizationsTab
+              suggestions={suggestions}
+              onRefreshAi={fetchAiOptimizations}
+              isLoadingAi={isLoadingAi}
+              onUpdateStatus={handleUpdateSuggestionStatus}
+              aiSource={aiSource}
+            />
+          )}
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 text-slate-400 py-6 text-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-300">VTEX Pulse</span>
-            <span>·</span>
-            <span>Plataforma de Otimização e Crescimento de E-commerce</span>
+          {activeTab === 'chat' && <ChatbotTab storeName={vtexConfig.accountName} />}
+
+          {activeTab === 'monthly-reports' && <MonthlyReportTab />}
+
+          {activeTab === 'alerts' && (
+            <AlertsTab
+              alerts={alerts}
+              onAcknowledgeAlert={handleAcknowledgeAlert}
+              onResolveAlert={handleResolveAlert}
+              dropThreshold={dropThreshold}
+              setDropThreshold={setDropThreshold}
+            />
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-slate-900 bg-slate-950 text-slate-400 py-5 text-xs">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-300">VTEX Pulse</span>
+              <span>·</span>
+              <span>Plataforma de Otimização e Crescimento de E-commerce</span>
+            </div>
+
+            <div className="flex items-center gap-4 text-[11px] text-slate-400">
+              <span>Ambiente: <strong className="text-slate-300">{vtexConfig.environment}</strong></span>
+              <span>·</span>
+              <span>IA: <strong className="text-pink-400">Gemini 3.8 Flash</strong></span>
+              <span>·</span>
+              <span>Versão: <strong className="text-pink-400">VTEX CMS Legacy (Portal)</strong></span>
+            </div>
           </div>
-
-          <div className="flex items-center gap-4 text-[11px] text-slate-400">
-            <span>Ambiente: <strong className="text-slate-300">{vtexConfig.environment}</strong></span>
-            <span>·</span>
-            <span>IA: <strong className="text-pink-400">Gemini 3.8 Flash</strong></span>
-            <span>·</span>
-            <span>Versão: <strong className="text-slate-300">VTEX IO Ready</strong></span>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
 
       {/* Setup Assistant Modal */}
       <SetupAssistantModal

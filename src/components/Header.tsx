@@ -8,19 +8,12 @@ import {
   Bot,
   FileText,
   AlertTriangle,
-  Globe,
   ShoppingCart,
+  MessageSquare,
+  Globe,
 } from 'lucide-react';
 
-export type TabType =
-  | 'overview'
-  | 'seo'
-  | 'geo'
-  | 'gsc'
-  | 'analytics'
-  | 'ai-suggestions'
-  | 'monthly-reports'
-  | 'alerts';
+export type { TabType } from './Sidebar';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -44,16 +37,17 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'gsc', label: 'Search Console', icon: <Search className="w-3.5 h-3.5" /> },
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="w-3.5 h-3.5" /> },
     { id: 'ai-suggestions', label: 'Sugestões IA', icon: <Sparkles className="w-3.5 h-3.5" /> },
+    { id: 'chat', label: 'Chatbot IA', icon: <MessageSquare className="w-3.5 h-3.5 text-pink-400" /> },
     { id: 'monthly-reports', label: 'Relatórios MoM', icon: <FileText className="w-3.5 h-3.5" /> },
     { id: 'alerts', label: 'Alertas', icon: <AlertTriangle className="w-3.5 h-3.5" /> },
   ];
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
-      {/* Top Bar Contract: 3 zones separated by gap-8 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-8">
+      {/* Top Bar Contract: 3 zones separated by gap */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Zone 1: Brand Wordmark */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-pink-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 font-bold text-base">
             V
           </div>
@@ -64,19 +58,20 @@ export const Header: React.FC<HeaderProps> = ({
                 e.preventDefault();
                 setActiveTab('overview');
               }}
-              className="text-lg font-bold tracking-tight text-white whitespace-nowrap hover:text-pink-400 transition-colors"
+              className="text-base font-bold tracking-tight text-white whitespace-nowrap hover:text-pink-400 transition-colors"
             >
               VTEX Pulse
             </a>
-            <span className="text-[11px] text-slate-400 whitespace-nowrap">
-              Loja: <strong className="text-slate-200">{storeName}</strong>
+            <span className="text-[10px] text-slate-400 whitespace-nowrap">
+              Loja: <strong className="text-slate-200">{storeName}</strong>{' '}
+              <span className="text-pink-400 font-mono font-medium">(CMS Legacy)</span>
             </span>
           </div>
         </div>
 
         {/* Zone 2: Navigation Links (Clean single-line tabs) */}
         <nav
-          className="hidden lg:flex items-center gap-1 overflow-x-auto py-1"
+          className="hidden xl:flex items-center gap-0.5 overflow-x-auto py-1"
           aria-label="Navegação Principal"
         >
           {navTabs.map((tab) => {
@@ -85,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+                className={`flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap shrink-0 ${
                   isActive
                     ? 'bg-slate-800 text-pink-400 font-semibold border border-slate-700/60 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
