@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { SeoHttpTestResult, SeoMetaTagItem } from '../types';
+import type { SeoHttpTestResult, SeoMetaTagItem } from '../types/index.ts';
 
 export interface SeoExtractorInput {
   html: string;

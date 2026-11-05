@@ -16,6 +16,7 @@ import {
   FileText,
   AlertTriangle,
   ShoppingCart,
+  Wand2,
 } from 'lucide-react';
 import { TabType } from './Sidebar';
 
@@ -31,6 +32,10 @@ interface TopbarProps {
 
 const TAB_TITLES: Record<TabType, { label: string; icon: React.ReactNode }> = {
   overview: { label: 'Visão Geral Executiva', icon: <ShoppingCart className="w-4 h-4 text-pink-400" /> },
+  'product-ia': {
+    label: 'Product IA: Conteúdo de Venda, SEO & Palavras-Chave',
+    icon: <Wand2 className="w-4 h-4 text-pink-400" />,
+  },
   'sitemap-urls': { label: 'Validador de Sitemaps & Construtor de URLs', icon: <FileCheck className="w-4 h-4 text-pink-400" /> },
   seo: { label: 'SEO Técnico & Core Web Vitals', icon: <Globe className="w-4 h-4 text-blue-400" /> },
   geo: { label: 'GEO (Generative Engine Optimization)', icon: <Bot className="w-4 h-4 text-purple-400" /> },

@@ -7,6 +7,7 @@ import {
   Zap,
   Activity,
   Bot,
+  Wand2,
 } from 'lucide-react';
 import { MetricPoint, calculateStoreHealthScore, calculateConversionOpportunity } from '../utils/metricsEngine';
 import { MetricCard } from './MetricCard';
@@ -85,6 +86,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              onClick={() => onNavigateTab('product-ia')}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-lg shadow-sm transition-colors border border-purple-500/40"
+            >
+              <Wand2 className="w-3.5 h-3.5 text-white" />
+              <span>Product IA: Criar Copy & SEO de Produto</span>
+            </button>
             <button
               onClick={() => onNavigateTab('ai-suggestions')}
               className="flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 rounded-lg shadow-sm transition-colors"

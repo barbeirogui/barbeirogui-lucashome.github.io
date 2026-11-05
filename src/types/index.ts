@@ -227,4 +227,79 @@ export interface SeoHttpTestResult {
   recommendations: string[];
 }
 
+export interface ProductCopyParams {
+  productName: string;
+  category?: string;
+  keyFeatures?: string;
+  targetAudience?: string;
+  toneOfVoice?: 'persuasive' | 'technical' | 'emotional' | 'urgent' | 'minimalist' | 'casual';
+  descriptionFormat?: 'vtex_html' | 'markdown' | 'plain';
+  targetKeyword?: string;
+  specialOffer?: string;
+}
 
+export interface ProductTitleVariation {
+  id: string;
+  title: string;
+  charCount: number;
+  focus: 'conversao' | 'seo' | 'equilibrado';
+  description: string;
+}
+
+export interface ProductCallToAction {
+  id: string;
+  text: string;
+  type: 'urgencia' | 'direto' | 'beneficio' | 'seguranca';
+  context: string;
+}
+
+export interface ProductKeywordItem {
+  keyword: string;
+  searchIntent: 'transacional' | 'comercial' | 'informativa';
+  estimatedVolume: string;
+  competition: 'baixa' | 'media' | 'alta';
+  cpcEstimate: string;
+  isPrimary?: boolean;
+}
+
+export interface ProductVtexSynonym {
+  term: string;
+  reason: string;
+  field: 'Palavra Substituta' | 'Sinônimo Intelligent Search' | 'Atributo Filtro';
+}
+
+export interface ProductGeneratedContent {
+  productName: string;
+  titles: ProductTitleVariation[];
+  primaryTitle: string;
+  salesPitch: string;
+  htmlDescription: string;
+  plainDescription: string;
+  benefits: string[];
+  technicalSpecs: { label: string; value: string }[];
+  seoTags: {
+    metaTitle: string;
+    metaDescription: string;
+    canonicalSlug: string;
+    ogTitle: string;
+    ogDescription: string;
+    twitterTitle: string;
+    twitterDescription: string;
+    schemaJsonLd: string;
+  };
+  callToActions: ProductCallToAction[];
+  keywords: {
+    primary: ProductKeywordItem;
+    secondary: ProductKeywordItem[];
+    longTail: ProductKeywordItem[];
+    vtexInternalSearchTerms: ProductVtexSynonym[];
+    questionsPeopleAsk: string[];
+  };
+  vtexLegacyIntegrationGuide: {
+    descriptionTag: string;
+    subtemplateSnippet: string;
+    urlRoute: string;
+  };
+  generatedAt: string;
+  modelUsed: string;
+}

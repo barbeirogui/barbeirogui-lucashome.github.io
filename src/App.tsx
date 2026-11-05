@@ -11,6 +11,7 @@ import { AiOptimizationsTab } from './components/AiOptimizationsTab';
 import { MonthlyReportTab } from './components/MonthlyReportTab';
 import { AlertsTab } from './components/AlertsTab';
 import { ChatbotTab } from './components/ChatbotTab';
+import { ProductIaTab } from './components/ProductIaTab';
 import { SetupAssistantModal } from './components/SetupAssistantModal';
 
 import {
@@ -228,6 +229,10 @@ export default function App() {
               onOpenSetup={() => setIsSetupOpen(true)}
               isVtexConnected={vtexConfig.isConnected}
             />
+          )}
+
+          {activeTab === 'product-ia' && (
+            <ProductIaTab storeDomain={vtexConfig.storeDomain} />
           )}
 
           {activeTab === 'sitemap-urls' && (

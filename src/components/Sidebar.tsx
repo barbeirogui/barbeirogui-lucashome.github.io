@@ -15,10 +15,12 @@ import {
   Sliders,
   PanelLeftClose,
   PanelLeftOpen,
+  Wand2,
 } from 'lucide-react';
 
 export type TabType =
   | 'overview'
+  | 'product-ia'
   | 'sitemap-urls'
   | 'seo'
   | 'geo'
@@ -50,6 +52,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navTabs: { id: TabType; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', label: 'Visão Geral', icon: <ShoppingCart className="w-4 h-4 shrink-0" /> },
+    {
+      id: 'product-ia',
+      label: 'Product IA (Copy & SEO)',
+      icon: <Wand2 className="w-4 h-4 shrink-0 text-pink-400" />,
+    },
     { id: 'sitemap-urls', label: 'Sitemap & Construtor', icon: <FileCheck className="w-4 h-4 shrink-0 text-pink-400" /> },
     { id: 'seo', label: 'SEO Técnico', icon: <Globe className="w-4 h-4 shrink-0" /> },
     { id: 'geo', label: 'GEO (IA)', icon: <Bot className="w-4 h-4 shrink-0" /> },

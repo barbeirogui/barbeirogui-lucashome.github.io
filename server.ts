@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
 import { parseHtmlMetaTags, generateVtexLegacyHtml } from './src/utils/seoHtmlValidator.ts';
+import { generateCuratedProductContent } from './src/utils/productContentEngine.ts';
 
 dotenv.config();
 
@@ -81,6 +82,13 @@ if (apiKey) {
       },
     },
   });
+}
+
+function withTimeout<T>(promise: Promise<T>, ms = 3000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+  ]);
 }
 
 async function startServer() {
@@ -260,32 +268,36 @@ Retorne os resultados em JSON com os campos especificados.`;
         },
       };
 
-      // Try models in order: gemini-3.8-flash, then fallback to gemini-3.1-flash-lite
-      const models = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
-      for (const model of models) {
-        try {
-          const response = await aiClient.models.generateContent({
-            model,
-            contents: prompt,
-            config: {
-              systemInstruction,
-              responseMimeType: 'application/json',
-              responseSchema,
-            },
-          });
+      // Try high-availability models: gemini-3.1-flash-lite, then gemini-3.8-flash, then gemini-flash-latest
+      if (aiClient) {
+        const models = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+        for (const model of models) {
+          try {
+            const response = await withTimeout(
+              aiClient.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                  systemInstruction,
+                  responseMimeType: 'application/json',
+                  responseSchema,
+                },
+              }),
+              3000
+            );
 
-          const parsed = JSON.parse(response.text ?? '[]');
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return res.json({
-              success: true,
-              source: model,
-              suggestions: parsed,
-            });
+            const parsed = JSON.parse(response.text ?? '[]');
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return res.json({
+                success: true,
+                source: model,
+                suggestions: parsed,
+              });
+            }
+          } catch {
+            // If model is busy (503) or quota limit reached (429), quietly fall back to next model or curated engine
+            continue;
           }
-        } catch (modelErr: unknown) {
-          // Soft notice: log as warn so that 429 quota exhaustion is handled cleanly
-          const msg = modelErr instanceof Error ? modelErr.message : String(modelErr);
-          console.warn(`[AI Engine] ${model} indisponível ou limite de cota atingido: ${msg.slice(0, 120)}...`);
         }
       }
 
@@ -296,14 +308,143 @@ Retorne os resultados em JSON com os campos especificados.`;
         suggestions: getDefaultVtexOptimizations(currentConversionRate, abandonmentRate),
         notice: 'Recomendações técnicas curadas para VTEX CMS Legacy aplicadas com sucesso.',
       });
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      console.warn('[AI Engine] Tratamento seguro de fallback ativado:', msg.slice(0, 100));
+    } catch {
       return res.json({
         success: true,
         source: 'curated_vtex_engine_fallback',
         suggestions: getDefaultVtexOptimizations(req.body.currentConversionRate || 2.4, req.body.abandonmentRate || 69.5),
         notice: 'Recomendações curadas especializadas para VTEX CMS Legacy aplicadas.',
+      });
+    }
+  });
+
+  // API Route: AI Product Content, Sales Copy, SEO Tags & Keywords Generator (Product IA)
+  app.post('/api/ai/generate-product-content', async (req: Request, res: Response) => {
+    try {
+      const {
+        productName = '',
+        category = 'Geral',
+        keyFeatures = '',
+        targetAudience = 'Consumidores exigentes que valorizam qualidade',
+        toneOfVoice = 'persuasive',
+        descriptionFormat = 'vtex_html',
+        targetKeyword = '',
+        specialOffer = '',
+      } = req.body;
+
+      if (!productName || typeof productName !== 'string' || productName.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'O nome do produto é obrigatório para gerar o conteúdo.',
+        });
+      }
+
+      const copyParams = {
+        productName: productName.trim(),
+        category: String(category || 'Geral').trim(),
+        keyFeatures: String(keyFeatures || '').trim(),
+        targetAudience: String(targetAudience || '').trim(),
+        toneOfVoice,
+        descriptionFormat,
+        targetKeyword: String(targetKeyword || '').trim(),
+        specialOffer: String(specialOffer || '').trim(),
+      };
+
+      // Base domain-curated generation (used as immediate high-fidelity baseline or fallback)
+      const baseContent = generateCuratedProductContent(copyParams);
+
+      if (aiClient) {
+        const prompt = `Você é o principal especialista em Copywriting de Alta Conversão para E-commerce, SEO Técnico para VTEX CMS LEGACY (Portal tradicional da VTEX com <vtex.cmc:productDescription />), Pesquisa Avançada de Palavras-Chave e Otimização para Motores de Busca e IA (Google, Perplexity e ChatGPT Search).
+
+DADOS DO PRODUTO:
+- Nome do Produto: ${copyParams.productName}
+- Categoria: ${copyParams.category}
+- Características Chave: ${copyParams.keyFeatures || 'Acabamento premium, durabilidade estendida e alto desempenho.'}
+- Público-Alvo: ${copyParams.targetAudience}
+- Tom de Voz: ${copyParams.toneOfVoice}
+- Palavra-chave Alvo: ${copyParams.targetKeyword || copyParams.productName}
+- Oferta Especial: ${copyParams.specialOffer || 'Parcelamento sem juros e envio rápido'}
+
+Gere um JSON com:
+- titles: array de 3 objetos com { id, title, charCount, focus: "conversao"|"seo"|"equilibrado", description }
+- primaryTitle: melhor título
+- salesPitch: parágrafo de vendas persuasivo AIDA
+- benefits: array de 4 a 5 strings com benefícios claros
+- technicalSpecs: array de objetos { label, value }
+- seoTags: { metaTitle (50-60 carac), metaDescription (145-160 carac), canonicalSlug, schemaJsonLd }
+- callToActions: array de 4 objetos { id, text, type, context }
+- keywords: {
+    primary: { keyword, searchIntent: "transacional", estimatedVolume, competition, cpcEstimate },
+    secondary: array de 4 objetos { keyword, searchIntent, estimatedVolume, competition, cpcEstimate },
+    longTail: array de 4 objetos { keyword, searchIntent, estimatedVolume, competition, cpcEstimate },
+    vtexInternalSearchTerms: array de 4 objetos { term, reason, field: "Palavra Substituta"|"Sinônimo Intelligent Search"|"Atributo Filtro" },
+    questionsPeopleAsk: array de 4 a 5 perguntas frequentes
+  }`;
+
+        const models = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
+        for (const model of models) {
+          try {
+            const response = await withTimeout(
+              aiClient.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                  systemInstruction:
+                    'Você é o motor inteligente Product IA para e-commerce VTEX CMS Legacy. Retorne apenas JSON com campos de títulos, descrição, tags SEO, CTAs e palavras-chave.',
+                  responseMimeType: 'application/json',
+                },
+              }),
+              4500
+            );
+
+            const parsed = JSON.parse(response.text ?? '{}');
+            if (parsed && (parsed.titles || parsed.primaryTitle || parsed.seoTags)) {
+              const mergedResult = {
+                ...baseContent,
+                productName: copyParams.productName,
+                titles: Array.isArray(parsed.titles) && parsed.titles.length > 0 ? parsed.titles : baseContent.titles,
+                primaryTitle: parsed.primaryTitle || parsed.titles?.[0]?.title || baseContent.primaryTitle,
+                salesPitch: parsed.salesPitch || baseContent.salesPitch,
+                benefits: Array.isArray(parsed.benefits) && parsed.benefits.length > 0 ? parsed.benefits : baseContent.benefits,
+                technicalSpecs: Array.isArray(parsed.technicalSpecs) && parsed.technicalSpecs.length > 0 ? parsed.technicalSpecs : baseContent.technicalSpecs,
+                seoTags: {
+                  ...baseContent.seoTags,
+                  ...(parsed.seoTags || {}),
+                },
+                callToActions: Array.isArray(parsed.callToActions) && parsed.callToActions.length > 0 ? parsed.callToActions : baseContent.callToActions,
+                keywords: {
+                  primary: parsed.keywords?.primary || baseContent.keywords.primary,
+                  secondary: Array.isArray(parsed.keywords?.secondary) && parsed.keywords.secondary.length > 0 ? parsed.keywords.secondary : baseContent.keywords.secondary,
+                  longTail: Array.isArray(parsed.keywords?.longTail) && parsed.keywords.longTail.length > 0 ? parsed.keywords.longTail : baseContent.keywords.longTail,
+                  vtexInternalSearchTerms: Array.isArray(parsed.keywords?.vtexInternalSearchTerms) && parsed.keywords.vtexInternalSearchTerms.length > 0 ? parsed.keywords.vtexInternalSearchTerms : baseContent.keywords.vtexInternalSearchTerms,
+                  questionsPeopleAsk: Array.isArray(parsed.keywords?.questionsPeopleAsk) && parsed.keywords.questionsPeopleAsk.length > 0 ? parsed.keywords.questionsPeopleAsk : baseContent.keywords.questionsPeopleAsk,
+                },
+                generatedAt: new Date().toLocaleString('pt-BR'),
+                modelUsed: `Gemini (${model}) + VTEX Specialist Engine`,
+              };
+
+              return res.json({
+                success: true,
+                source: model,
+                content: mergedResult,
+              });
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+
+      return res.json({
+        success: true,
+        source: 'curated_product_engine',
+        content: baseContent,
+      });
+    } catch {
+      return res.json({
+        success: true,
+        source: 'curated_product_engine_fallback',
+        content: generateCuratedProductContent(req.body || { productName: 'Produto' }),
       });
     }
   });
@@ -1127,17 +1268,20 @@ DIRETRIZES DE RESPOSTA:
 4. Responda em Português do Brasil com formatação elegante (títulos, listas e blocos de código formatados).`;
 
       if (aiClient) {
-        const chatModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite'];
+        const chatModels = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-flash-latest'];
         for (const chatModel of chatModels) {
           try {
-            const response = await aiClient.models.generateContent({
-              model: chatModel,
-              contents,
-              config: {
-                systemInstruction,
-                tools: [{ googleSearch: {} }],
-              },
-            });
+            const response = await withTimeout(
+              aiClient.models.generateContent({
+                model: chatModel,
+                contents,
+                config: {
+                  systemInstruction,
+                  tools: [{ googleSearch: {} }],
+                },
+              }),
+              3000
+            );
 
             const replyText = response.text || 'Não foi possível gerar uma resposta detalhada no momento.';
 
@@ -1159,9 +1303,9 @@ DIRETRIZES DE RESPOSTA:
               searchQueries: webSearchQueries,
               model: chatModel,
             });
-          } catch (apiErr: unknown) {
-            const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
-            console.warn(`[Chatbot Engine] ${chatModel} indisponível ou limite de cota: ${msg.slice(0, 100)}...`);
+          } catch {
+            // Quietly fall back to next model or curated engine
+            continue;
           }
         }
       }
@@ -1184,9 +1328,7 @@ DIRETRIZES DE RESPOSTA:
         searchQueries: ['vtex cms legacy portal seo', 'schema org product skuJson vtex'],
         model: 'curated-vtex-specialist-engine',
       });
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      console.warn('[Chatbot Engine] Erro tratado com resposta de fallback:', msg.slice(0, 100));
+    } catch {
       return res.json({
         success: true,
         reply: generateCuratedSpecialistResponse('vtex'),
