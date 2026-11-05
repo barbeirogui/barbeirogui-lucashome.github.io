@@ -20,6 +20,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { VtexConfig, GoogleConfig, ToolValidationResult, SyntheticConnectionReport } from '../types';
+import { VtexCatalogLiveChecker } from './VtexCatalogLiveChecker.tsx';
 
 interface SetupAssistantModalProps {
   isOpen: boolean;
@@ -137,13 +138,21 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
   };
 
   const handleSaveAll = () => {
+    const isDemo = String(appKey).includes('lojamoda-XQZT92') || String(appToken).includes('8291048102938475');
+    const isLive = Boolean(vtexConfig.isConnected && vtexConfig.isLiveApiConnected && !isDemo);
+    const connMode = isLive ? 'live' : (isDemo ? 'demo' : (vtexConfig.connectionMode || 'error'));
+
     const updatedVtex: VtexConfig = {
       accountName,
       appKey,
       appToken,
       environment,
       storeDomain,
-      isConnected: Boolean(accountName && appKey && appToken),
+      isConnected: isLive,
+      isLiveApiConnected: isLive,
+      connectionMode: connMode,
+      apiAuthStatus: vtexConfig.apiAuthStatus,
+      apiAuthMessage: vtexConfig.apiAuthMessage,
       lastConnectedAt: new Date().toLocaleString('pt-BR'),
       vtexVersion: 'VTEX CMS Legacy (Portal)',
     };
@@ -201,15 +210,23 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
       if (data.success && data.result) {
         setValidationResults((prev) => ({ ...prev, [tool]: data.result }));
 
-        // Auto sync if valid
-        if (tool === 'vtex' && data.result.isValid) {
+        // Auto sync if valid or invalid
+        if (tool === 'vtex') {
+          const isLive = Boolean(data.result.isValid && data.result.isLive);
+          const isDemo = String(appKey).includes('lojamoda-XQZT92') || String(appToken).includes('8291048102938475');
+          const connMode = isLive ? 'live' : (isDemo ? 'demo' : 'error');
+
           onSaveVtexConfig({
             accountName,
             appKey,
             appToken,
             environment,
             storeDomain,
-            isConnected: true,
+            isConnected: isLive,
+            isLiveApiConnected: isLive,
+            connectionMode: connMode,
+            apiAuthStatus: isLive ? 200 : (isDemo ? undefined : 401),
+            apiAuthMessage: data.result.summary || (isLive ? 'Autenticado com sucesso na VTEX.' : 'Chave ou token rejeitados pela VTEX.'),
             lastConnectedAt: new Date().toLocaleString('pt-BR'),
             vtexVersion: 'VTEX CMS Legacy (Portal)',
           });
@@ -231,17 +248,36 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
   };
 
   const handleSaveVtexManual = () => {
+    const isDemo = String(appKey).includes('lojamoda-XQZT92') || String(appToken).includes('8291048102938475');
+    const wasLive = Boolean(
+      vtexConfig.isConnected &&
+      vtexConfig.isLiveApiConnected &&
+      vtexConfig.appKey === appKey &&
+      vtexConfig.appToken === appToken &&
+      vtexConfig.accountName === accountName &&
+      !isDemo
+    );
+    const connMode = wasLive ? 'live' : (isDemo ? 'demo' : 'error');
+
     onSaveVtexConfig({
       accountName,
       appKey,
       appToken,
       environment,
       storeDomain,
-      isConnected: Boolean(accountName && appKey && appToken),
+      isConnected: wasLive,
+      isLiveApiConnected: wasLive,
+      connectionMode: connMode,
+      apiAuthStatus: wasLive ? 200 : (isDemo ? undefined : 401),
+      apiAuthMessage: wasLive
+        ? 'Chave autenticada ao vivo.'
+        : isDemo
+        ? 'Modo Demonstração (Métricas Modelo).'
+        : 'Chave salva. Execute a validação para testar as credenciais com a loja.',
       lastConnectedAt: new Date().toLocaleString('pt-BR'),
       vtexVersion: 'VTEX CMS Legacy (Portal)',
     });
-    setSaveSuccessNotice('Configurações da VTEX salvas e persistidas com sucesso!');
+    setSaveSuccessNotice('Configurações da VTEX salvas! Execute a validação para testar as credenciais com a loja.');
     setTimeout(() => setSaveSuccessNotice(null), 3000);
     runSyntheticCheck({ accName: accountName, aKey: appKey, aToken: appToken, env: environment, domain: storeDomain });
   };
@@ -444,6 +480,8 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                   className={`p-3 rounded-xl border transition-all ${
                     isChecking
                       ? 'bg-slate-900/60 border-slate-800'
+                      : item?.status === 'warning'
+                      ? 'bg-amber-950/20 border-amber-500/40'
                       : isPassed
                       ? 'bg-emerald-950/20 border-emerald-500/40'
                       : 'bg-rose-950/20 border-rose-500/40'
@@ -453,6 +491,8 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                       {isChecking ? (
                         <RefreshCw className="w-4 h-4 text-pink-400 animate-spin shrink-0" />
+                      ) : item?.status === 'warning' ? (
+                        <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                       ) : isPassed ? (
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                       ) : (
@@ -474,25 +514,22 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                           {item.latencyMs}ms
                         </span>
                       )}
-                      <span
-                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded flex items-center gap-1 ${
-                          isPassed
-                            ? 'bg-emerald-500/20 text-emerald-300'
-                            : 'bg-rose-500/20 text-rose-300'
-                        }`}
-                      >
-                        {isPassed ? (
-                          <>
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            <span>Válido</span>
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="w-3 h-3 text-rose-400" />
-                            <span>Falha</span>
-                          </>
-                        )}
-                      </span>
+                      {item?.status === 'warning' ? (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-500/20 text-amber-300 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3 text-amber-400" />
+                          <span>Modo Demo</span>
+                        </span>
+                      ) : isPassed ? (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Válido</span>
+                        </span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-rose-500/20 text-rose-300 flex items-center gap-1">
+                          <XCircle className="w-3 h-3 text-rose-400" />
+                          <span>Falha</span>
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -696,8 +733,12 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
           >
             <Key className="w-3.5 h-3.5" />
             <span>1. VTEX (KEY & TOKEN)</span>
-            {vtexConfig.isConnected && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400 ml-1" title="Vínculo Ativo" />
+            {vtexConfig.connectionMode === 'error' ? (
+              <span className="w-2 h-2 rounded-full bg-rose-500 ml-1" title="Chave Inválida / Desconectada" />
+            ) : vtexConfig.isConnected && vtexConfig.isLiveApiConnected ? (
+              <span className="w-2 h-2 rounded-full bg-emerald-400 ml-1" title="Vínculo Ativo (API Ao Vivo)" />
+            ) : (
+              <span className="w-2 h-2 rounded-full bg-amber-400 ml-1" title="Modo Demonstração" />
             )}
           </button>
 
@@ -749,16 +790,60 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
           {/* TAB 1: VTEX */}
           {activeSubTab === 'vtex' && (
             <div className="space-y-6">
-              <div className="p-4 rounded-xl border border-pink-500/30 bg-pink-950/10 space-y-1">
-                <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-pink-400" />
-                  <span>Conexão Direta com sua Conta VTEX CMS Legacy</span>
-                </h3>
-                <p className="text-xs text-slate-300">
-                  Insira abaixo as credenciais geradas no License Manager da VTEX. O sistema validará se a AppKey e
-                  AppToken estão conectando corretamente à API de Catálogo e OMS da sua loja.
-                </p>
-              </div>
+              {/* Live Catalog API Verification Component */}
+              <VtexCatalogLiveChecker
+                accountName={accountName || 'lucashome'}
+                environment={environment || 'vtexcommercestable'}
+              />
+
+              {/* Dynamic Status Callout */}
+              {vtexConfig.connectionMode === 'error' ? (
+                <div className="p-4 rounded-xl border border-rose-500/40 bg-rose-950/25 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                    <h3 className="text-sm font-bold text-rose-300">
+                      Chave da API VTEX Inválida / Desconectada
+                    </h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono">
+                      HTTP {vtexConfig.apiAuthStatus || '401'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {vtexConfig.apiAuthMessage || 'A chave informada foi rejeitada pelos servidores da VTEX. O painel NÃO está conectado à sua loja e permanece desconectado.'}
+                  </p>
+                  <p className="text-[11px] text-rose-300/80 font-medium">
+                    Como resolver: Verifique no License Manager da VTEX se o AppKey e o AppToken foram copiados integralmente e possuem perfil de acesso ativo com leitura de OMS e Catálogo.
+                  </p>
+                </div>
+              ) : vtexConfig.isConnected && vtexConfig.isLiveApiConnected ? (
+                <div className="p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/25 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <h3 className="text-sm font-bold text-emerald-300">
+                      Conexão ao Vivo com a API VTEX Ativa
+                    </h3>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+                      HTTP 200 OK
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Autenticado com sucesso na conta "{vtexConfig.accountName}". Coletando dados reais via API de OMS e Catálogo.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-950/15 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <h3 className="text-sm font-bold text-amber-300">
+                      Modo Demonstração (Métricas Modelo)
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    As credenciais atuais utilizam dados modelo. Para conectar sua loja real no VTEX CMS Legacy (Portal),
+                    insira abaixo a AppKey e AppToken gerados no License Manager da VTEX e clique em <strong>Validar Conexão VTEX Agora</strong>.
+                  </p>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -855,24 +940,32 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
 
               {/* Instructions */}
               <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-                <h4 className="text-xs font-bold text-slate-200">
-                  Como gerar uma Chave com as permissões corretas no Admin VTEX:
-                </h4>
-                <ol className="space-y-2 text-xs text-slate-300 list-decimal list-inside">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-200">
+                    Guia de Conexão VTEX da Loja Lucas Home:
+                  </h4>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                    Catálogo Ativo & Aberto
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  💡 <strong>Catálogo e Árvore de Categorias:</strong> O catálogo da Lucas Home já responde diretamente via API pública na VTEX. As abas de Sitemap e IA de Produtos já carregam suas categorias reais (Colchões, Camas Baú Conceito, Base Box, Cabeceiras).
+                </p>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  🔐 <strong>Métricas de Pedidos e Faturamento (OMS):</strong> Para sair do modo demonstração no painel de receita, a VTEX exige autenticação privada com o <strong>AppToken</strong> correspondente à AppKey <code className="text-pink-400 font-mono">vtexappkey-lucashome-DTGGHF</code>:
+                </p>
+                <ol className="space-y-1.5 text-xs text-slate-300 list-decimal list-inside">
                   <li>
-                    Acesse o Admin VTEX em <code className="text-pink-400 font-mono">https://{accountName || 'sualoja'}.myvtex.com/admin</code>.
+                    Acesse o Admin da Lucas Home em <code className="text-pink-400 font-mono">https://lucashome.myvtex.com/admin</code>.
                   </li>
                   <li>
                     Vá em <strong>Configurações da Conta &gt; Gerenciamento de Contas &gt; Chaves de aplicação</strong>.
                   </li>
                   <li>
-                    Clique em <strong>Gerenciar chaves</strong> &gt; <strong>Gerar chave</strong>.
+                    Localize a chave <code className="text-slate-200 font-mono">vtexappkey-lucashome-DTGGHF</code> (ou gere uma nova se o token foi perdido).
                   </li>
                   <li>
-                    Defina um rótulo (ex: "Dashboard VTEX Pulse") e adicione os perfis <strong>Catalog (Leitura)</strong> e <strong>OMS (Leitura de Pedidos)</strong>.
-                  </li>
-                  <li>
-                    Copie a <strong>Chave de Aplicação (AppKey)</strong> e o <strong>Segredo (AppToken)</strong> gerado.
+                    Cole o <strong>AppToken</strong> no campo acima e clique em <strong>Validar Conexão VTEX Agora</strong>.
                   </li>
                 </ol>
               </div>

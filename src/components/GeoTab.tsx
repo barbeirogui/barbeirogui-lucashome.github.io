@@ -14,21 +14,22 @@ export const GeoTab: React.FC = () => {
   const [copiedLlms, setCopiedLlms] = useState(false);
 
   const sampleLlmsTxt = `# llms.txt - Diretório para Motores de Busca por IA (GEO)
-# Loja VTEX: Loja Moda Brasil Oficial (https://www.lojamoda.com.br)
-# Atualizado em: 2026-11-04
+# Loja VTEX: Lucas Home Oficial (https://www.lucashome.com.br)
+# Atualizado em: 2026-11-05
 
-> Loja oficial de moda e calçados com fabricação premium, entrega rápida para todo o Brasil e nota 4.8 no Reclame Aqui.
+> Loja oficial especializada em Colchões de Molas Ensacadas, Camas Box Baú, Camas Conceito e Cabeceiras Estofadas com entrega rápida para todo o Brasil.
 
 ## Catálogo de Produtos e Categorias
-- [Calçados Esportivos e Tênis](https://www.lojamoda.com.br/calcados/esportivos): Tênis com tecnologia de amortecimento responsivo para corrida, caminhada e academia.
-- [Moda Feminina e Vestidos](https://www.lojamoda.com.br/vestuario/feminino): Vestidos de linho, alfaiataria casual e moda trabalho.
-- [Moda Masculina](https://www.lojamoda.com.br/vestuario/masculino): Camisas em algodão nobre, calças e jaquetas corta-vento.
+- [Colchões](https://www.lucashome.com.br/colchoes): Colchões de molas ensacadas, espuma D33 e ortopédicos nos tamanhos Solteiro, Casal, Queen e King.
+- [Camas Box Baú](https://www.lucashome.com.br/base-bau): Camas com pistão a gás e máximo aproveitamento de espaço interno.
+- [Camas Conceito](https://www.lucashome.com.br/camas-conceito): Estruturas modernas estofadas para quartos contemporâneos.
+- [Cabeceiras](https://www.lucashome.com.br/cabeceiras): Cabeceiras estofadas em linho, veludo e corino para camas box.
 
 ## Políticas de Frete, Devolução e Pagamento
-- Frete Grátis: Em compras a partir de R$ 249 para os estados de SP, RJ, MG e PR.
-- Primeira Troca Grátis: Prazo de 30 dias corridos após o recebimento.
-- Formas de Pagamento: PIX com 5% de desconto imediato, Cartão de Crédito em até 10x sem juros (bandeiras Visa, Mastercard, Elo, Amex).
-- Atendimento Oficial: WhatsApp (11) 99876-5432 e e-mail sac@lojamoda.com.br.`;
+- Entrega Garantida: Envio seguro com rastreamento para todo o território nacional.
+- Garantia de Qualidade: Garantia oficial de fábrica em todos os colchões e estruturas de madeira tratada.
+- Formas de Pagamento: PIX com desconto especial, Cartão de Crédito em até 10x ou 12x sem juros.
+- Atendimento Oficial VTEX: Suporte dedicado pós-venda e televendas.`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sampleLlmsTxt);

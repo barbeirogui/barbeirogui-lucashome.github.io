@@ -26,31 +26,34 @@ import type {
   ProductGeneratedContent,
   ProductTitleVariation,
   ProductKeywordItem,
+  LsiKeywordAnalysis,
 } from '../types/index.ts';
 import {
   PRODUCT_PRESETS,
   generateCuratedProductContent,
+  generateCuratedLsiAnalysis,
 } from '../utils/productContentEngine.ts';
+import { LsiKeywordExplorerSection } from './LsiKeywordExplorerSection.tsx';
 
 interface ProductIaTabProps {
   storeDomain?: string;
 }
 
 export const ProductIaTab: React.FC<ProductIaTabProps> = ({
-  storeDomain = 'www.lojamoda.com.br',
+  storeDomain = 'www.lucashome.com.br',
 }) => {
-  // Input parameters state
-  const [productName, setProductName] = useState('Tênis Running Pro Carbon Turbo');
-  const [category, setCategory] = useState('Calçados Esportivos');
+  // Input parameters state (Pre-filled with Lucas Home store catalog)
+  const [productName, setProductName] = useState('Colchão Queen Molas Ensacadas Plenno Ortobom 158x198');
+  const [category, setCategory] = useState('Colchões & Sono');
   const [keyFeatures, setKeyFeatures] = useState(
-    'Placa de carbono 100% responsiva, solado em superespuma EVA nitrogenada, peso ultraleve de 198g, cabedal respirável em mesh tecnológico, drop de 6mm, grip antiderrapante de alta tração'
+    'Molas ensacadas individualmente que não transferem movimento, Pillow Top em espuma D33 de alta resiliência, tecido em malha belga com fios de bambu antialérgico e antiácaro, suporte até 130kg por pessoa, conforto intermediário firme'
   );
   const [targetAudience, setTargetAudience] = useState(
-    'Corredores amadores e maratonistas que buscam baixar seu pace e máximo retorno de energia'
+    'Casais que buscam noites de sono reparadoras, alívio de pontos de pressão na coluna e durabilidade comprovada'
   );
   const [toneOfVoice, setToneOfVoice] = useState<ProductCopyParams['toneOfVoice']>('persuasive');
-  const [targetKeyword, setTargetKeyword] = useState('tênis de corrida com placa de carbono');
-  const [specialOffer, setSpecialOffer] = useState('De R$ 899,90 por R$ 649,90 em até 10x sem juros + Frete Grátis');
+  const [targetKeyword, setTargetKeyword] = useState('colchão queen molas ensacadas casal');
+  const [specialOffer, setSpecialOffer] = useState('De R$ 2.499,90 por R$ 1.899,90 em até 10x sem juros + Frete Grátis Sudeste');
 
   // Loading & generation state
   const [isLoading, setIsLoading] = useState(false);
@@ -68,8 +71,11 @@ export const ProductIaTab: React.FC<ProductIaTabProps> = ({
     })
   );
 
+  // Main mode switcher: Full Product Generator vs Dedicated LSI Keyword Explorer
+  const [mainViewMode, setMainViewMode] = useState<'product_generator' | 'lsi_keywords'>('product_generator');
+
   // Active view tab inside results
-  const [activeResultTab, setActiveResultTab] = useState<'titles_cta' | 'description' | 'seo_serp' | 'keywords' | 'vtex_guide'>('titles_cta');
+  const [activeResultTab, setActiveResultTab] = useState<'titles_cta' | 'description' | 'seo_serp' | 'keywords' | 'lsi_terms' | 'vtex_guide'>('titles_cta');
   const [descViewMode, setDescViewMode] = useState<'preview' | 'html' | 'plain'>('preview');
   const [serpDevice, setSerpDevice] = useState<'desktop' | 'mobile'>('desktop');
 
@@ -282,10 +288,51 @@ ${result.htmlDescription}
         </div>
       </div>
 
-      {/* Main Grid: Form Parameters (Left/Top) & Generated Results (Right/Bottom) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Configuration Parameters */}
-        <div className="lg:col-span-5 space-y-5">
+      {/* Sub-Tab Navigation: Full Product Copy vs Dedicated LSI Keyword Explorer */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-900 border border-slate-800">
+        <button
+          onClick={() => setMainViewMode('product_generator')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            mainViewMode === 'product_generator'
+              ? 'bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md shadow-pink-950/40'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4 text-pink-300" />
+          <span>Gerador Completo de Produto (Copy, Títulos, HTML & SEO)</span>
+        </button>
+
+        <button
+          onClick={() => setMainViewMode('lsi_keywords')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            mainViewMode === 'lsi_keywords'
+              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md shadow-purple-950/40'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-purple-300" />
+          <span>Sugestões Semânticas & Termos LSI (Gemini AI)</span>
+          <span className="px-1.5 py-0.2 rounded-full bg-pink-500/20 text-pink-300 text-[10px] font-mono border border-pink-500/30">
+            Novo
+          </span>
+        </button>
+      </div>
+
+      {mainViewMode === 'lsi_keywords' ? (
+        <LsiKeywordExplorerSection
+          initialKeyword={targetKeyword || 'tênis de corrida com placa de carbono'}
+          initialCategory={category || 'Calçados Esportivos & Corrida'}
+          onApplyToProductGenerator={(kw, cat) => {
+            setTargetKeyword(kw);
+            if (cat) setCategory(cat);
+            setMainViewMode('product_generator');
+          }}
+        />
+      ) : (
+        /* Main Grid: Form Parameters (Left/Top) & Generated Results (Right/Bottom) */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Configuration Parameters */}
+          <div className="lg:col-span-5 space-y-5">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2 text-white font-semibold text-sm">
@@ -457,6 +504,7 @@ ${result.htmlDescription}
                 { id: 'description', label: 'Descrição de Venda', icon: FileText },
                 { id: 'seo_serp', label: 'Tags SEO & SERP', icon: Search },
                 { id: 'keywords', label: 'Palavras-Chave', icon: TrendingUp },
+                { id: 'lsi_terms', label: 'Termos LSI', icon: Sparkles },
                 { id: 'vtex_guide', label: 'Guia VTEX', icon: Layers },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -465,7 +513,7 @@ ${result.htmlDescription}
                   <button
                     key={tab.id}
                     onClick={() => setActiveResultTab(tab.id as any)}
-                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer ${
                       isActive
                         ? 'bg-pink-600 text-white shadow-md shadow-pink-950/40'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
@@ -1179,7 +1227,50 @@ ${result.htmlDescription}
             </div>
           )}
 
-          {/* TAB 5: Guia de Aplicação no VTEX CMS Legacy */}
+          {/* TAB 5: Termos LSI & Sugestões Semânticas (Inline Explorer) */}
+          {activeResultTab === 'lsi_terms' && (
+            <div className="space-y-5">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800 gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <div>
+                      <h3 className="text-sm font-bold text-white">
+                        Sugestões Semânticas & Termos LSI do Produto
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        Termos contextuais derivados da palavra-chave: <strong className="text-pink-300">"{targetKeyword}"</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setMainViewMode('lsi_keywords')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+                  >
+                    <span>Abrir no Explorador LSI Completo</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Para impulsionar a relevância no Google e IAs (ChatGPT Search / Perplexity), incorpore estes termos LSI de maneira distribuída na descrição HTML da sua PDP VTEX (<code className="text-pink-300 font-mono">&lt;vtex.cmc:productDescription /&gt;</code>) e nas palavras substitutas do catálogo.
+                </p>
+              </div>
+
+              <LsiKeywordExplorerSection
+                initialKeyword={targetKeyword || 'tênis de corrida com placa de carbono'}
+                initialCategory={category || 'Calçados Esportivos & Corrida'}
+                onApplyToProductGenerator={(kw, cat) => {
+                  setTargetKeyword(kw);
+                  if (cat) setCategory(cat);
+                  setMainViewMode('product_generator');
+                }}
+              />
+            </div>
+          )}
+
+          {/* TAB 6: Guia de Aplicação no VTEX CMS Legacy */}
           {activeResultTab === 'vtex_guide' && (
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
               <div className="pb-3 border-b border-slate-800">
@@ -1240,6 +1331,7 @@ ${result.htmlDescription}
           )}
         </div>
       </div>
+      )}
     </div>
   );
 };

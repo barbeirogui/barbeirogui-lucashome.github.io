@@ -218,6 +218,7 @@ export default function App() {
           unreadAlertsCount={unreadAlertsCount}
           onOpenSetup={() => setIsSetupOpen(true)}
           storeName={vtexConfig.accountName}
+          vtexConfig={vtexConfig}
         />
 
         {/* Main Content Viewport */}
@@ -228,6 +229,7 @@ export default function App() {
               onNavigateTab={setActiveTab}
               onOpenSetup={() => setIsSetupOpen(true)}
               isVtexConnected={vtexConfig.isConnected}
+              vtexConfig={vtexConfig}
             />
           )}
 

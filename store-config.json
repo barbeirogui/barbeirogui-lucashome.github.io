@@ -1,16 +1,19 @@
 {
   "vtexConfig": {
-    "accountName": "loja-vtex-premium",
-    "appKey": "vtexappkey-lojamoda-XQZT92",
-    "appToken": "vtextoken-secret-prod-8291048102938475",
+    "accountName": "lucashome",
+    "appKey": "vtexappkey-lucashome-DTGGHF",
+    "appToken": "",
     "environment": "vtexcommercestable",
-    "storeDomain": "www.lojavtexpremium.com.br",
-    "isConnected": true,
-    "lastConnectedAt": "04/11/2026, 19:01:05",
+    "storeDomain": "www.lucashome.com.br",
+    "isConnected": false,
+    "isLiveApiConnected": false,
+    "connectionMode": "demo",
+    "apiAuthMessage": "Conta lucashome configurada. Insira o AppToken gerado no License Manager da VTEX para ativar a coleta ao vivo de pedidos e faturamento.",
+    "lastConnectedAt": "05/11/2026, 12:30:00",
     "vtexVersion": "VTEX CMS Legacy (Portal)"
   },
   "googleConfig": {
-    "searchConsoleProperty": "sc-domain:lojamoda.com.br",
+    "searchConsoleProperty": "sc-domain:lucashome.com.br",
     "searchConsoleConnected": true,
     "ga4PropertyId": "412891920",
     "ga4MeasurementId": "G-7XYZ982104",

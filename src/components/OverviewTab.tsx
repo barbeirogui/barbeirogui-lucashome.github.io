@@ -14,11 +14,14 @@ import { MetricCard } from './MetricCard';
 import { checkoutFunnelData } from '../data/mockStoreData';
 import { TabType } from './Header';
 
+import type { VtexConfig } from '../types';
+
 interface OverviewTabProps {
   metrics: MetricPoint[];
   onNavigateTab: (tab: TabType) => void;
   onOpenSetup: () => void;
   isVtexConnected: boolean;
+  vtexConfig?: VtexConfig;
 }
 
 export const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -26,6 +29,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   onNavigateTab,
   onOpenSetup,
   isVtexConnected,
+  vtexConfig,
 }) => {
   const [upliftDelta, setUpliftDelta] = useState<number>(0.4);
 
@@ -47,24 +51,73 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Top Banner / Store Status */}
-      {!isVtexConnected && (
-        <div className="p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+      {/* Connection & Data Source Status Banner */}
+      {vtexConfig?.connectionMode === 'error' ? (
+        <div className="p-4 rounded-xl border border-rose-500/40 bg-rose-950/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-rose-500 shrink-0 mt-1 sm:mt-0" />
             <div>
-              <h2 className="text-sm font-semibold text-white">VTEX não conectada</h2>
-              <p className="text-xs text-slate-300">
-                Insira sua chave (AppKey) e token (AppToken) da VTEX para sincronizar estatísticas em tempo real.
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold text-rose-300 uppercase tracking-wider">
+                  Status: Falha na Autenticação VTEX (Chave Inválida / Desconectada)
+                </h2>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-mono">
+                  HTTP {vtexConfig?.apiAuthStatus || '401'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                A chave de API configurada para a conta <strong>"{vtexConfig?.accountName || 'loja'}"</strong> foi rejeitada pelos servidores da VTEX. {vtexConfig?.apiAuthMessage || 'Verifique o AppKey e AppToken no License Manager da VTEX e conceda permissões de leitura no OMS e Catálogo.'}
               </p>
             </div>
           </div>
           <button
             onClick={onOpenSetup}
-            className="px-3.5 py-1.5 text-xs font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 rounded-lg whitespace-nowrap transition-colors"
+            className="px-3.5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded-lg whitespace-nowrap transition-colors shadow-sm cursor-pointer shrink-0"
           >
-            Conectar Agora
+            Corrigir Chaves da VTEX
           </button>
+        </div>
+      ) : !(vtexConfig?.isLiveApiConnected || vtexConfig?.connectionMode === 'live') ? (
+        <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse mt-1 sm:mt-0 shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                  Status Atual: Modo Demonstração (Métricas Modelo)
+                </h2>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                  Conta: {vtexConfig?.accountName || 'loja-vtex-premium'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                As métricas exibidas no painel (Receita, Pedidos e Conversão) são <strong>dados modelo para demonstração</strong>. Para coletar e visualizar as vendas reais da sua loja via API VTEX, configure uma chave de aplicação real (AppKey e AppToken) com perfil de OMS e Catálogo.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onOpenSetup}
+            className="px-3.5 py-2 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 rounded-lg whitespace-nowrap transition-colors shadow-sm cursor-pointer shrink-0"
+          >
+            Configurar Chaves da Loja
+          </button>
+        </div>
+      ) : (
+        <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/20 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-emerald-400 shrink-0" />
+            <div>
+              <h2 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">
+                Conectado ao Vivo à API VTEX Commerce (Dados Reais)
+              </h2>
+              <p className="text-xs text-slate-300">
+                Conta <strong>{vtexConfig?.accountName}</strong> autenticada com sucesso no ambiente {vtexConfig?.environment}.com.br.
+              </p>
+            </div>
+          </div>
+          <span className="text-[11px] font-mono text-emerald-400 px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/30">
+            API Live
+          </span>
         </div>
       )}
 

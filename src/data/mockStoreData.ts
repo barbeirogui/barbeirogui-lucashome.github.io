@@ -12,18 +12,22 @@ import {
 import { MetricPoint } from '../utils/metricsEngine';
 
 export const initialVtexConfig: VtexConfig = {
-  accountName: 'lojamoda-vtex',
-  appKey: 'vtexappkey-lojamoda-XQZT92',
-  appToken: '••••••••••••••••••••••••••••••••••••••',
+  accountName: 'lucashome',
+  appKey: 'vtexappkey-lucashome-DTGGHF',
+  appToken: '',
   environment: 'vtexcommercestable',
-  storeDomain: 'www.lojamoda.com.br',
-  isConnected: true,
-  lastConnectedAt: '2026-11-04 12:45',
+  storeDomain: 'www.lucashome.com.br',
+  isConnected: false,
+  isLiveApiConnected: false,
+  connectionMode: 'demo',
+  apiAuthStatus: undefined,
+  apiAuthMessage: 'Conta lucashome configurada. Insira o AppToken da VTEX para ativar a coleta ao vivo de pedidos e faturamento.',
+  lastConnectedAt: '05/11/2026 12:30',
   vtexVersion: 'VTEX CMS Legacy (Portal v1.8)',
 };
 
 export const initialGoogleConfig: GoogleConfig = {
-  searchConsoleProperty: 'sc-domain:lojamoda.com.br',
+  searchConsoleProperty: 'sc-domain:lucashome.com.br',
   searchConsoleConnected: true,
   ga4PropertyId: 'properties/412891920',
   ga4MeasurementId: 'G-7X98WZ11AA',
@@ -143,7 +147,7 @@ export const seoIssuesData: SeoIssue[] = [
     id: 'seo_1',
     type: 'critical',
     title: '18 URLs com Erro 301 em Cadeia / Loop no Gerenciador de URL do Portal',
-    url: '/calcados/tenis-esportivos?order=OrderByPriceASC',
+    url: '/colchoes/colchao-queen-molas-ensacadas?order=OrderByPriceASC',
     impact: 'Desperdiça Crawl Budget do Google e causa desindexação de subcategorias.',
     module: 'CMS > Gerenciador de URL',
     remedy: 'No Admin VTEX > CMS > Gerenciador de URL, substitua rotas intermediárias por apontamento 301 direto para a URL canônica limpa.',
@@ -224,20 +228,20 @@ export const gscKeywordsData: GscKeyword[] = [
     suggestedAction: 'Queda de 3 posições. Atualizar especificações técnicas e reviews na PDP.',
   },
   {
-    query: 'tenis corrida feminino leve',
+    query: 'cama box bau casal com colchao',
     clicks: 6700,
     impressions: 76000,
     ctr: 8.81,
     position: 3.1,
     opportunityType: 'cannibalized',
-    suggestedAction: 'Duas URLs competindo (/calcados/feminino e /colecao-tenis). Definir canonical única.',
+    suggestedAction: 'Duas URLs competindo (/camas-conceito/casal e /base-bau/casal). Definir canonical única.',
   },
 ];
 
 export const geoCitationsData: GeoCitation[] = [
   {
     engine: 'Perplexity',
-    promptQuery: 'Melhores tênis de corrida com custo benefício no Brasil em 2026',
+    promptQuery: 'Melhores camas box baú e colchões de molas ensacadas no Brasil em 2026',
     brandMentioned: true,
     citationRank: 1,
     sentiment: 'positive',

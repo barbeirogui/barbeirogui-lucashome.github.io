@@ -28,6 +28,7 @@ import {
   Share2,
   Eye,
   Sparkles,
+  Download,
 } from 'lucide-react';
 import { SitemapValidationResult, UrlCheckResult, VtexUrlBuildResult, SeoHttpTestResult } from '../types';
 
@@ -44,17 +45,18 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
 
   // Batch URLs state
   const [urlInput, setUrlInput] = useState<string>(
-    `https://${storeDomain}/calcados/tenis-running-pro/p\nhttps://${storeDomain}/calcados/tenis-running-pro/p/\nhttps://${storeDomain}/calcados/corrida?fq=C:10001\nhttps://${storeDomain}/calcados/esportivos\nhttps://${storeDomain}/outlet-antigo\nhttps://${storeDomain}/produto-descontinuado-404/p`
+    `https://${storeDomain}/colchoes/colchao-de-molas-ensacadas-ortobom-one-face-plenno-superpocket-solteiro-88cm-cinza/p\nhttps://${storeDomain}/camas-conceito\nhttps://${storeDomain}/camas-conceito/camas-conceito-casal\nhttps://${storeDomain}/camas-bau-conceito\nhttps://${storeDomain}/base-bau\nhttps://${storeDomain}/cabeceiras\nhttps://${storeDomain}/colchoes`
   );
   const [urlResults, setUrlResults] = useState<UrlCheckResult[]>([]);
   const [isValidatingUrls, setIsValidatingUrls] = useState(false);
+  const [isLoadingLiveUrls, setIsLoadingLiveUrls] = useState(false);
 
   // URL Builder state
   const [builderType, setBuilderType] = useState<'product' | 'category' | 'department' | 'search_filter'>('product');
-  const [productName, setProductName] = useState('Tênis Corrida Alpha Pro Masculino');
-  const [department, setDepartment] = useState('Calçados');
-  const [category, setCategory] = useState('Tênis Esportivos');
-  const [filterTerm, setFilterTerm] = useState('Corrida Amortecimento');
+  const [productName, setProductName] = useState('Colchão de Molas Ensacadas Ortobom Queen 158cm');
+  const [department, setDepartment] = useState('Colchões');
+  const [category, setCategory] = useState('Molas Ensacadas');
+  const [filterTerm, setFilterTerm] = useState('Queen Size');
   const [buildResult, setBuildResult] = useState<VtexUrlBuildResult | null>(null);
 
   // HTTP GET Test & SEO Meta Tags state
@@ -75,6 +77,25 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleFetchLiveVtexUrls = async () => {
+    setIsLoadingLiveUrls(true);
+    try {
+      const res = await fetch('/api/vtex/fetch-sitemap-urls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeDomain }),
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.urls) && data.urls.length > 0) {
+        setUrlInput(data.urls.join('\n'));
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar URLs da VTEX:', err);
+    } finally {
+      setIsLoadingLiveUrls(false);
+    }
   };
 
   const handleValidateSitemap = async () => {
@@ -434,25 +455,35 @@ export const SitemapUrlBuilderTab: React.FC<SitemapUrlBuilderTabProps> = ({ stor
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={handleValidateBatchUrls}
                 disabled={isValidatingUrls || !urlInput.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-pink-600 hover:bg-pink-500 disabled:opacity-50 rounded-lg shadow-sm transition-all"
+                className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-pink-600 hover:bg-pink-500 disabled:opacity-50 rounded-lg shadow-sm transition-all cursor-pointer"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isValidatingUrls ? 'animate-spin' : ''}`} />
                 <span>{isValidatingUrls ? 'Validando URLs...' : 'Validar Todas as URLs Agora'}</span>
               </button>
 
               <button
+                onClick={handleFetchLiveVtexUrls}
+                disabled={isLoadingLiveUrls}
+                className="flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/50 rounded-lg shadow-sm transition-all cursor-pointer"
+                title="Conectar ao catálogo público da Lucas Home e carregar URLs reais de categorias e produtos"
+              >
+                <Download className={`w-3.5 h-3.5 ${isLoadingLiveUrls ? 'animate-spin' : ''}`} />
+                <span>{isLoadingLiveUrls ? 'Carregando da VTEX...' : '📥 Carregar URLs Reais da Lucas Home'}</span>
+              </button>
+
+              <button
                 onClick={() =>
                   setUrlInput(
-                    `https://${storeDomain}/calcados/tenis-running-pro/p\nhttps://${storeDomain}/calcados/tenis-running-pro/p/\nhttps://${storeDomain}/calcados/corrida?fq=C:10001\nhttps://${storeDomain}/calcados/esportivos\nhttps://${storeDomain}/outlet-antigo\nhttps://${storeDomain}/produto-descontinuado-404/p`
+                    `https://${storeDomain}/colchoes/colchao-queen-molas-ensacadas/p\nhttps://${storeDomain}/colchoes/colchao-queen-molas-ensacadas/p/\nhttps://${storeDomain}/camas-conceito/casal\nhttps://${storeDomain}/camas-bau-conceito\nhttps://${storeDomain}/colchoes?fq=C:10001\nhttps://${storeDomain}/outlet-antigo-desativado/p`
                   )
                 }
-                className="px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700"
+                className="px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 cursor-pointer"
               >
-                Carregar Exemplo com Falhas do Portal
+                Restaurar Exemplos da Lucas Home
               </button>
             </div>
           </div>

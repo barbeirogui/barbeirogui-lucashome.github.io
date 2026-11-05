@@ -5,8 +5,12 @@ export interface VtexConfig {
   environment: string;
   storeDomain: string;
   isConnected: boolean;
+  isLiveApiConnected?: boolean;
+  connectionMode?: 'live' | 'demo' | 'error' | 'disconnected';
   lastConnectedAt?: string;
   vtexVersion?: string;
+  apiAuthStatus?: number;
+  apiAuthMessage?: string;
 }
 
 export interface GoogleConfig {
@@ -177,7 +181,7 @@ export interface VtexUrlBuildResult {
 export interface SyntheticConnectionItem {
   id: 'vtex_api_keys' | 'environment_url' | 'gsc_credentials';
   name: string;
-  status: 'passed' | 'failed' | 'checking' | 'idle';
+  status: 'passed' | 'warning' | 'failed' | 'checking' | 'idle';
   summary: string;
   detail: string;
   latencyMs?: number;
@@ -300,6 +304,36 @@ export interface ProductGeneratedContent {
     subtemplateSnippet: string;
     urlRoute: string;
   };
+  lsiAnalysis?: LsiKeywordAnalysis;
   generatedAt: string;
   modelUsed: string;
 }
+
+export interface LsiTermItem {
+  term: string;
+  relevanceScore: number;
+  recommendation: string;
+  exampleContext: string;
+  searchIntent?: 'transacional' | 'comercial' | 'informativa';
+}
+
+export interface LsiKeywordAnalysis {
+  targetKeyword: string;
+  category?: string;
+  optimizationFocus?: string;
+  semanticRelevanceScore: number;
+  primarySearchIntent: 'transacional' | 'comercial' | 'informativa';
+  recommendedDensity: string;
+  lsiClusters: {
+    technicalSpecs: LsiTermItem[];
+    problemBenefits: LsiTermItem[];
+    naturalSynonyms: LsiTermItem[];
+    buyerTriggers: LsiTermItem[];
+    vtexInternalSearch: LsiTermItem[];
+  };
+  productDescriptionSnippets: string[];
+  seoRecommendation: string;
+  generatedAt: string;
+  modelUsed: string;
+}
+

@@ -19,6 +19,7 @@ import {
   Wand2,
 } from 'lucide-react';
 import { TabType } from './Sidebar';
+import type { VtexConfig } from '../types';
 
 interface TopbarProps {
   activeTab: TabType;
@@ -28,6 +29,7 @@ interface TopbarProps {
   unreadAlertsCount: number;
   onOpenSetup: () => void;
   storeName: string;
+  vtexConfig?: VtexConfig;
 }
 
 const TAB_TITLES: Record<TabType, { label: string; icon: React.ReactNode }> = {
@@ -55,6 +57,7 @@ export const Topbar: React.FC<TopbarProps> = ({
   unreadAlertsCount,
   onOpenSetup,
   storeName,
+  vtexConfig,
 }) => {
   const currentTabInfo = TAB_TITLES[activeTab] || { label: 'Painel', icon: <Activity className="w-4 h-4 text-pink-400" /> };
 
@@ -94,6 +97,32 @@ export const Topbar: React.FC<TopbarProps> = ({
           <ShieldCheck className="w-3.5 h-3.5 text-pink-400" />
           <span>Loja: <strong className="text-white">{storeName}</strong> (CMS Legacy)</span>
         </div>
+
+        {/* Live API vs Error vs Demo Mode Indicator */}
+        {vtexConfig?.isLiveApiConnected || vtexConfig?.connectionMode === 'live' ? (
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[11px] text-emerald-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>API VTEX Ao Vivo (Dados Reais)</span>
+          </div>
+        ) : vtexConfig?.connectionMode === 'error' ? (
+          <button
+            onClick={onOpenSetup}
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/40 text-[11px] text-rose-300 hover:bg-rose-500/25 transition cursor-pointer"
+            title="Chave VTEX incorreta ou rejeitada (HTTP 401/403). Clique para corrigir."
+          >
+            <span className="w-2 h-2 rounded-full bg-rose-500" />
+            <span>Chave VTEX Inválida / Desconectada</span>
+          </button>
+        ) : (
+          <button
+            onClick={onOpenSetup}
+            className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 hover:bg-amber-500/20 transition cursor-pointer"
+            title="Clique para ver o status e instruções para conectar chaves de produção"
+          >
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span>Modo Demonstração (Dados Modelo)</span>
+          </button>
+        )}
 
         {/* Alerts Bell */}
         <button
