@@ -1,6 +1,6 @@
 {
-  "summary": "Plano de Ação para Conexão Real da VTEX (Lucas Home) e Eliminação de Dados de Demonstração (/calcados/):\n1. Diagnóstico do AppKey e AppToken para a conta lucashome e validação automática.\n2. Substituição de todas as URLs genéricas de /calcados/ por dados reais da Lucas Home (Colchões, Camas Box, Quarto) e importação do sitemap.xml.\n3. Criação de endpoint para carregar a árvore de categorias real da VTEX (Catalog API).",
-  "updatedAt": "2026-11-05T15:25:32.414610864Z",
+  "summary": "Plano arquitetural e de implementação para integrar Catálogo e Vendas reais da VTEX (Lucas Home), sanitizar o validador de Sitemap para ler diretamente o XML/API oficial da loja sem produtos fictícios de calçados, corrigir a validação e formatação XML-safe (sem erro de &&) do Schema.org para Subtemplates do VTEX CMS Legacy, e implementar armazenamento criptografado/mascarado das credenciais da API VTEX no backend.",
+  "updatedAt": "2026-11-06T10:50:39.897188110Z",
   "requestFeedback": true,
   "userFacing": true
 }

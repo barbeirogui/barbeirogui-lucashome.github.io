@@ -414,9 +414,11 @@ Garantia oficial do fabricante com nota fiscal e suporte pós-venda dedicado.`;
   <vtex.cmc:productDescription />
 </div>
 
-<!-- Injeção do Schema.org JSON-LD estruturado de Produto -->
+<!-- Injeção segura do Schema.org JSON-LD (com CDATA para evitar erro de XML no Portal VTEX) -->
 <script type="application/ld+json">
+/*<![CDATA[*/
 ${schemaJsonLd}
+/*]]>*/
 </script>`,
       urlRoute: `/admin/vtex/cms/layout/html-templates`,
     },

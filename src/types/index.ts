@@ -337,3 +337,58 @@ export interface LsiKeywordAnalysis {
   modelUsed: string;
 }
 
+export interface VtexCatalogProduct {
+  productId: string;
+  productName: string;
+  brand: string;
+  brandId?: number;
+  productReference?: string;
+  productReferenceCode?: string;
+  categoryId: string;
+  categoryName?: string;
+  linkText: string;
+  url: string;
+  productTitle?: string;
+  metaTagDescription?: string;
+  imageUrl?: string;
+  pricePix?: number;
+  priceCard?: number;
+  listPrice?: number;
+  installments?: string;
+  hasBestPrice?: boolean;
+  isAvailable?: boolean;
+  skuCount?: number;
+  skus?: Array<{
+    id: string;
+    name: string;
+    sellers?: any[];
+    images?: Array<{ imageUrl: string }>;
+  }>;
+  releaseDate?: string;
+}
+
+export interface VtexSalesPerformance {
+  periodDays: number;
+  totalOrders: number;
+  totalRevenue: number;
+  averageTicket: number;
+  conversionRate: number;
+  topCategories: Array<{
+    categoryName: string;
+    ordersCount: number;
+    revenue: number;
+    sharePercent: number;
+  }>;
+  recentOrdersSample: Array<{
+    orderId: string;
+    creationDate: string;
+    totalValue: number;
+    statusDescription: string;
+    itemsCount: number;
+  }>;
+  source: 'vtex_oms_live' | 'vtex_catalog_analytics';
+  isLive: boolean;
+  accountName: string;
+  calculatedAt: string;
+}
+

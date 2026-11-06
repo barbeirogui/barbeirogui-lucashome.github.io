@@ -16,10 +16,12 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Wand2,
+  Package,
 } from 'lucide-react';
 
 export type TabType =
   | 'overview'
+  | 'catalog-sales'
   | 'product-ia'
   | 'sitemap-urls'
   | 'seo'
@@ -52,6 +54,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navTabs: { id: TabType; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', label: 'Visão Geral', icon: <ShoppingCart className="w-4 h-4 shrink-0" /> },
+    {
+      id: 'catalog-sales',
+      label: 'Catálogo & Vendas',
+      icon: <Package className="w-4 h-4 shrink-0 text-emerald-400" />,
+    },
     {
       id: 'product-ia',
       label: 'Product IA (Copy & SEO)',

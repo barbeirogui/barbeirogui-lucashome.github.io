@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   ShoppingCart,
   Wand2,
+  Package,
 } from 'lucide-react';
 import { TabType } from './Sidebar';
 import type { VtexConfig } from '../types';
@@ -34,6 +35,10 @@ interface TopbarProps {
 
 const TAB_TITLES: Record<TabType, { label: string; icon: React.ReactNode }> = {
   overview: { label: 'Visão Geral Executiva', icon: <ShoppingCart className="w-4 h-4 text-pink-400" /> },
+  'catalog-sales': {
+    label: 'Catálogo de Produtos & Dashboard de Vendas VTEX',
+    icon: <Package className="w-4 h-4 text-emerald-400" />,
+  },
   'product-ia': {
     label: 'Product IA: Conteúdo de Venda, SEO & Palavras-Chave',
     icon: <Wand2 className="w-4 h-4 text-pink-400" />,

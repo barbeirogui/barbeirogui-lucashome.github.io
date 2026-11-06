@@ -12,6 +12,7 @@ import { MonthlyReportTab } from './components/MonthlyReportTab';
 import { AlertsTab } from './components/AlertsTab';
 import { ChatbotTab } from './components/ChatbotTab';
 import { ProductIaTab } from './components/ProductIaTab';
+import { CatalogSalesTab } from './components/CatalogSalesTab';
 import { SetupAssistantModal } from './components/SetupAssistantModal';
 
 import {
@@ -20,7 +21,7 @@ import {
   initialGoogleConfig,
 } from './data/mockStoreData';
 import { detectSuddenDrops, AlertNotification } from './utils/metricsEngine';
-import { OptimizationSuggestion, VtexConfig, GoogleConfig } from './types';
+import { OptimizationSuggestion, VtexConfig, GoogleConfig, VtexCatalogProduct } from './types';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -67,6 +68,12 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<OptimizationSuggestion[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
   const [aiSource, setAiSource] = useState<string>('gemini-3.8-flash');
+  const [selectedProductForIa, setSelectedProductForIa] = useState<VtexCatalogProduct | null>(null);
+
+  const handleSendProductToIa = (prod: VtexCatalogProduct) => {
+    setSelectedProductForIa(prod);
+    setActiveTab('product-ia');
+  };
 
   // Load server-persisted config on initial mount (keeps state synchronized across sessions)
   useEffect(() => {
@@ -233,8 +240,19 @@ export default function App() {
             />
           )}
 
+          {activeTab === 'catalog-sales' && (
+            <CatalogSalesTab
+              storeDomain={vtexConfig.storeDomain}
+              accountName={vtexConfig.accountName}
+              onSendProductToIa={handleSendProductToIa}
+            />
+          )}
+
           {activeTab === 'product-ia' && (
-            <ProductIaTab storeDomain={vtexConfig.storeDomain} />
+            <ProductIaTab
+              storeDomain={vtexConfig.storeDomain}
+              selectedProductFromCatalog={selectedProductForIa}
+            />
           )}
 
           {activeTab === 'sitemap-urls' && (

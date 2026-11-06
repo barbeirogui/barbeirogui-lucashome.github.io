@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   Copy,
@@ -35,12 +35,16 @@ import {
 } from '../utils/productContentEngine.ts';
 import { LsiKeywordExplorerSection } from './LsiKeywordExplorerSection.tsx';
 
+import type { VtexCatalogProduct } from '../types/index.ts';
+
 interface ProductIaTabProps {
   storeDomain?: string;
+  selectedProductFromCatalog?: VtexCatalogProduct | null;
 }
 
 export const ProductIaTab: React.FC<ProductIaTabProps> = ({
   storeDomain = 'www.lucashome.com.br',
+  selectedProductFromCatalog = null,
 }) => {
   // Input parameters state (Pre-filled with Lucas Home store catalog)
   const [productName, setProductName] = useState('Colchão Queen Molas Ensacadas Plenno Ortobom 158x198');
@@ -55,19 +59,66 @@ export const ProductIaTab: React.FC<ProductIaTabProps> = ({
   const [targetKeyword, setTargetKeyword] = useState('colchão queen molas ensacadas casal');
   const [specialOffer, setSpecialOffer] = useState('De R$ 2.499,90 por R$ 1.899,90 em até 10x sem juros + Frete Grátis Sudeste');
 
+  // Live products loaded from store catalog
+  const [liveCatalogProducts, setLiveCatalogProducts] = useState<VtexCatalogProduct[]>([]);
+  const [isLoadingCatalogPicker, setIsLoadingCatalogPicker] = useState(false);
+
+  // Sync when product is sent from CatalogSalesTab
+  useEffect(() => {
+    if (selectedProductFromCatalog) {
+      applyCatalogProduct(selectedProductFromCatalog);
+    }
+  }, [selectedProductFromCatalog]);
+
+  // Load catalog options
+  useEffect(() => {
+    fetch('/api/vtex/catalog-products?_from=0&_to=20')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.products)) {
+          setLiveCatalogProducts(data.products);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const applyCatalogProduct = (p: VtexCatalogProduct) => {
+    setProductName(p.productName);
+    setCategory(p.categoryName || 'Móveis & Colchões');
+    setKeyFeatures(
+      `Marca: ${p.brand}. Referência: ${p.productReference || p.productId}. Estrutura anatômica testada, alta sustentação e acabamento premium da linha Lucas Home.`
+    );
+    setTargetAudience('Clientes que buscam máximo conforto, durabilidade comprovada e sofisticação para o dormitório');
+    setTargetKeyword(p.productName.toLowerCase().slice(0, 35));
+    if (p.pricePix) {
+      setSpecialOffer(`R$ ${p.pricePix.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} no PIX ou ${p.installments}`);
+    }
+
+    const immediate = generateCuratedProductContent({
+      productName: p.productName,
+      category: p.categoryName || 'Móveis & Colchões',
+      keyFeatures: `Marca: ${p.brand}. Acabamento nobre, certificação de qualidade e pronta entrega.`,
+      targetAudience: 'Compradores exigentes em busca de qualidade de sono e ergonomia',
+      toneOfVoice: 'persuasive',
+      targetKeyword: p.productName.toLowerCase().slice(0, 35),
+      specialOffer: p.pricePix ? `R$ ${p.pricePix.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} no PIX` : undefined,
+    });
+    setResult(immediate);
+  };
+
   // Loading & generation state
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ProductGeneratedContent>(() =>
     generateCuratedProductContent({
-      productName: 'Tênis Running Pro Carbon Turbo',
-      category: 'Calçados Esportivos',
+      productName: 'Colchão Queen Molas Ensacadas Plenno Ortobom 158x198',
+      category: 'Colchões & Sono',
       keyFeatures:
-        'Placa de carbono 100% responsiva, solado em superespuma EVA nitrogenada, peso ultraleve de 198g, cabedal respirável em mesh tecnológico, drop de 6mm, grip antiderrapante de alta tração',
+        'Molas ensacadas individualmente que não transferem movimento, Pillow Top em espuma D33 de alta resiliência, tecido em malha belga com fios de bambu antialérgico e antiácaro, suporte até 130kg por pessoa, conforto intermediário firme',
       targetAudience:
-        'Corredores amadores e maratonistas que buscam baixar seu pace e máximo retorno de energia',
+        'Casais que buscam noites de sono reparadoras, alívio de pontos de pressão na coluna e durabilidade comprovada',
       toneOfVoice: 'persuasive',
-      targetKeyword: 'tênis de corrida com placa de carbono',
-      specialOffer: 'De R$ 899,90 por R$ 649,90 em até 10x sem juros + Frete Grátis',
+      targetKeyword: 'colchão queen molas ensacadas casal',
+      specialOffer: 'De R$ 2.499,90 por R$ 1.899,90 em até 10x sem juros + Frete Grátis Sudeste',
     })
   );
 
@@ -270,21 +321,47 @@ ${result.htmlDescription}
         </div>
 
         {/* Quick Presets Carousel */}
-        <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 mr-1">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            Produtos de Teste Rápido:
-          </span>
-          {PRODUCT_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              onClick={() => handleApplyPreset(preset.id)}
-              className="px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5"
-            >
-              <ShoppingBag className="w-3 h-3 text-pink-400" />
-              {preset.name}
-            </button>
-          ))}
+        <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5 mr-1">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              Presets Rápidos:
+            </span>
+            {PRODUCT_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => handleApplyPreset(preset.id)}
+                className="px-3 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-pink-500/40 text-slate-300 hover:text-white text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <ShoppingBag className="w-3 h-3 text-pink-400" />
+                {preset.name}
+              </button>
+            ))}
+          </div>
+
+          {liveCatalogProducts.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Puxar do Catálogo Real:</span>
+              </span>
+              <select
+                onChange={(e) => {
+                  const found = liveCatalogProducts.find((p) => p.productId === e.target.value);
+                  if (found) applyCatalogProduct(found);
+                }}
+                defaultValue=""
+                className="bg-slate-950 border border-emerald-500/40 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-pink-500 cursor-pointer max-w-[260px] truncate"
+              >
+                <option value="" disabled>Selecione um produto da Lucas Home...</option>
+                {liveCatalogProducts.map((p) => (
+                  <option key={p.productId} value={p.productId}>
+                    {p.productName} ({p.brand})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
