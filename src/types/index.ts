@@ -11,6 +11,7 @@ export interface VtexConfig {
   vtexVersion?: string;
   apiAuthStatus?: number;
   apiAuthMessage?: string;
+  hasSecureToken?: boolean;
 }
 
 export interface GoogleConfig {
@@ -367,28 +368,66 @@ export interface VtexCatalogProduct {
   releaseDate?: string;
 }
 
+export interface VtexOrderSummary {
+  orderId: string;
+  creationDate: string;
+  clientName?: string;
+  totalValue: number;
+  status: string;
+  statusDescription: string;
+  cancelReason?: string;
+  paymentMethod?: string;
+  itemsCount: number;
+  shippingCity?: string;
+  shippingState?: string;
+  itemsSummary?: string;
+}
+
+export interface VtexOrderStatusCount {
+  status: string;
+  label: string;
+  count: number;
+  totalValue: number;
+  percent: number;
+  color: string;
+}
+
+export interface VtexCancellationReasonItem {
+  reason: string;
+  count: number;
+  percent: number;
+  estimatedLossValue: number;
+  suggestedAction?: string;
+}
+
 export interface VtexSalesPerformance {
   periodDays: number;
   totalOrders: number;
   totalRevenue: number;
   averageTicket: number;
   conversionRate: number;
+  canceledOrdersCount: number;
+  canceledOrdersRate: number;
+  ordersByStatus: VtexOrderStatusCount[];
+  cancellationReasons: VtexCancellationReasonItem[];
   topCategories: Array<{
     categoryName: string;
     ordersCount: number;
     revenue: number;
     sharePercent: number;
   }>;
-  recentOrdersSample: Array<{
-    orderId: string;
-    creationDate: string;
-    totalValue: number;
-    statusDescription: string;
-    itemsCount: number;
-  }>;
+  recentOrdersSample: VtexOrderSummary[];
   source: 'vtex_oms_live' | 'vtex_catalog_analytics';
   isLive: boolean;
   accountName: string;
   calculatedAt: string;
 }
-
+export interface VtexCategoryTreeItem {
+  id: number;
+  name: string;
+  url: string;
+  hasChildren: boolean;
+  children?: VtexCategoryTreeItem[];
+  Title?: string;
+  MetaTagDescription?: string;
+}

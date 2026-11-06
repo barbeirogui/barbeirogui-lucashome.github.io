@@ -18,8 +18,11 @@ import {
   Tag,
   ShieldCheck,
   ChevronRight,
+  ChevronDown,
+  CornerDownRight,
+  X,
 } from 'lucide-react';
-import type { VtexCatalogProduct, VtexSalesPerformance } from '../types';
+import type { VtexCatalogProduct, VtexSalesPerformance, VtexCategoryTreeItem } from '../types';
 
 interface CatalogSalesTabProps {
   storeDomain?: string;
@@ -39,18 +42,39 @@ export const CatalogSalesTab: React.FC<CatalogSalesTabProps> = ({
   const [products, setProducts] = useState<VtexCatalogProduct[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedParentCategory, setSelectedParentCategory] = useState<string>('all');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('all');
   const [totalLoaded, setTotalLoaded] = useState(0);
+
+  // Live Category Tree state
+  const [categoriesTree, setCategoriesTree] = useState<VtexCategoryTreeItem[]>([]);
+  const [isLoadingTree, setIsLoadingTree] = useState(false);
 
   // Sales state
   const [salesData, setSalesData] = useState<VtexSalesPerformance | null>(null);
   const [isLoadingSales, setIsLoadingSales] = useState(false);
 
-  // Load products
+  // Load live category tree from VTEX API
+  const fetchCategoryTree = async () => {
+    setIsLoadingTree(true);
+    try {
+      const res = await fetch('/api/vtex/catalog-categories');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.categories)) {
+        setCategoriesTree(data.categories);
+      }
+    } catch (err) {
+      console.warn('Erro ao carregar árvore de categorias VTEX:', err);
+    } finally {
+      setIsLoadingTree(false);
+    }
+  };
+
+  // Load products (accepts parent or sub category ID)
   const fetchProducts = async (catId = '', term = '') => {
     setIsLoadingProducts(true);
     try {
-      let url = `/api/vtex/catalog-products?_from=0&_to=35`;
+      let url = `/api/vtex/catalog-products?_from=0&_to=45`;
       if (catId && catId !== 'all') {
         url += `&categoryId=${encodeURIComponent(catId)}`;
       }
@@ -87,18 +111,29 @@ export const CatalogSalesTab: React.FC<CatalogSalesTabProps> = ({
   };
 
   useEffect(() => {
+    fetchCategoryTree();
     fetchProducts();
     fetchSales();
   }, [accountName]);
 
-  const categoriesFilterList = [
-    { id: 'all', label: 'Todas as Categorias' },
-    { id: '272', label: 'Colchões' },
-    { id: '268', label: 'Base Baú' },
-    { id: '267', label: 'Base Box' },
-    { id: '269', label: 'Bicamas' },
-    { id: '271', label: 'Cabeceiras' },
-  ];
+  // Selected parent category item from live tree
+  const activeParentCategoryItem = categoriesTree.find(
+    (c) => String(c.id) === selectedParentCategory
+  );
+
+  const subCategoriesList = activeParentCategoryItem?.children || [];
+
+  const handleSelectParentCategory = (catId: string) => {
+    setSelectedParentCategory(catId);
+    setSelectedSubCategory('all');
+    fetchProducts(catId === 'all' ? '' : catId, searchTerm);
+  };
+
+  const handleSelectSubCategory = (subId: string) => {
+    setSelectedSubCategory(subId);
+    const targetCatId = subId === 'all' ? selectedParentCategory : subId;
+    fetchProducts(targetCatId === 'all' ? '' : targetCatId, searchTerm);
+  };
 
   const filteredProducts = products.filter((p) => {
     if (!searchTerm) return true;
@@ -160,10 +195,10 @@ export const CatalogSalesTab: React.FC<CatalogSalesTabProps> = ({
       {/* SUB-TAB 1: CATALOG OF PRODUCTS */}
       {activeSubTab === 'catalog' && (
         <div className="space-y-4">
-          {/* Controls Bar: Search & Category Filter */}
-          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3 flex-1 min-w-[280px]">
-              <div className="relative flex-1 min-w-[220px]">
+          {/* Controls Bar: Search & Multilevel Category Filter */}
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="relative flex-1 min-w-[240px]">
                 <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -174,34 +209,120 @@ export const CatalogSalesTab: React.FC<CatalogSalesTabProps> = ({
                 />
               </div>
 
-              <div className="flex items-center gap-1 overflow-x-auto">
-                {categoriesFilterList.map((cat) => (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    fetchCategoryTree();
+                    fetchProducts(
+                      selectedSubCategory !== 'all' ? selectedSubCategory : (selectedParentCategory === 'all' ? '' : selectedParentCategory),
+                      searchTerm
+                    );
+                  }}
+                  disabled={isLoadingProducts || isLoadingTree}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-pink-400 ${isLoadingProducts || isLoadingTree ? 'animate-spin' : ''}`} />
+                  <span>{isLoadingProducts ? 'Atualizando...' : 'Recarregar Catálogo'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Level 1: Parent Department Buttons (Loaded live from VTEX API) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-pink-400" />
+                  <span>Departamentos Principais da Loja ({categoriesTree.length || 8}):</span>
+                </span>
+                {selectedParentCategory !== 'all' && (
+                  <button
+                    onClick={() => handleSelectParentCategory('all')}
+                    className="text-[11px] text-pink-400 hover:text-pink-300 flex items-center gap-1 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Ver todos</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                <button
+                  onClick={() => handleSelectParentCategory('all')}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
+                    selectedParentCategory === 'all'
+                      ? 'bg-pink-600 text-white shadow-sm'
+                      : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  Todas as Categorias
+                </button>
+
+                {categoriesTree.map((cat) => (
                   <button
                     key={cat.id}
-                    onClick={() => {
-                      setSelectedCategory(cat.id);
-                      fetchProducts(cat.id, searchTerm);
-                    }}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-                      selectedCategory === cat.id
-                        ? 'bg-pink-600 text-white'
+                    onClick={() => handleSelectParentCategory(String(cat.id))}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg whitespace-nowrap transition-colors flex items-center gap-1.5 cursor-pointer ${
+                      selectedParentCategory === String(cat.id)
+                        ? 'bg-pink-600 text-white shadow-sm'
                         : 'bg-slate-950 text-slate-300 hover:bg-slate-800 border border-slate-800'
                     }`}
                   >
-                    {cat.label}
+                    <span>{cat.name}</span>
+                    {cat.children && cat.children.length > 0 && (
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        selectedParentCategory === String(cat.id)
+                          ? 'bg-white/20 text-white'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {cat.children.length}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
             </div>
 
-            <button
-              onClick={() => fetchProducts(selectedCategory, searchTerm)}
-              disabled={isLoadingProducts}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-pink-400 ${isLoadingProducts ? 'animate-spin' : ''}`} />
-              <span>{isLoadingProducts ? 'Atualizando...' : 'Recarregar Produtos'}</span>
-            </button>
+            {/* Level 2: Subcategories (Contextual when a parent category is selected) */}
+            {selectedParentCategory !== 'all' && subCategoriesList.length > 0 && (
+              <div className="p-3 rounded-lg bg-slate-950/80 border border-pink-500/30 space-y-2 animate-in fade-in duration-200">
+                <div className="flex items-center gap-2 text-xs">
+                  <CornerDownRight className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                  <span className="font-semibold text-slate-200">
+                    Subcategorias de {activeParentCategoryItem?.name}:
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    (Clique para filtrar modelos específicos)
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    onClick={() => handleSelectSubCategory('all')}
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer ${
+                      selectedSubCategory === 'all'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                    }`}
+                  >
+                    Todas de {activeParentCategoryItem?.name}
+                  </button>
+
+                  {subCategoriesList.map((sub) => (
+                    <button
+                      key={sub.id}
+                      onClick={() => handleSelectSubCategory(String(sub.id))}
+                      className={`px-2.5 py-1 text-[11px] font-medium rounded-md whitespace-nowrap transition-colors cursor-pointer ${
+                        selectedSubCategory === String(sub.id)
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-slate-900 text-slate-300 hover:bg-slate-800 border border-slate-700'
+                      }`}
+                    >
+                      {sub.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Product Cards Grid */}
@@ -218,8 +339,9 @@ export const CatalogSalesTab: React.FC<CatalogSalesTabProps> = ({
               <button
                 onClick={() => {
                   setSearchTerm('');
-                  setSelectedCategory('all');
-                  fetchProducts('all', '');
+                  setSelectedParentCategory('all');
+                  setSelectedSubCategory('all');
+                  fetchProducts('', '');
                 }}
                 className="mt-3 px-3.5 py-1.5 text-xs font-semibold text-pink-400 bg-slate-950 hover:bg-slate-800 rounded-lg border border-pink-500/40 cursor-pointer"
               >

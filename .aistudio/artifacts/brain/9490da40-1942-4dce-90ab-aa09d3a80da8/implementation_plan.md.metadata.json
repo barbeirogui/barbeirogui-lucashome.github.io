@@ -1,6 +1,6 @@
 {
-  "summary": "Plano arquitetural e de implementação para integrar Catálogo e Vendas reais da VTEX (Lucas Home), sanitizar o validador de Sitemap para ler diretamente o XML/API oficial da loja sem produtos fictícios de calçados, corrigir a validação e formatação XML-safe (sem erro de &&) do Schema.org para Subtemplates do VTEX CMS Legacy, e implementar armazenamento criptografado/mascarado das credenciais da API VTEX no backend.",
-  "updatedAt": "2026-11-06T10:50:39.897188110Z",
+  "summary": "Plano para carregar e exibir a árvore completa e viva de categorias e subcategorias da VTEX (Lucas Home) com seletor multinível hierárquico, incluindo as categorias faltantes (Camas Conceito, Camas Baú Conceito e Colchões Enrolados) e suas respectivas subcategorias (Casal, Queen, King, Solteiro, Viúva, Solteirinho, etc.).",
+  "updatedAt": "2026-11-06T17:35:47.501061808Z",
   "requestFeedback": true,
   "userFacing": true
 }

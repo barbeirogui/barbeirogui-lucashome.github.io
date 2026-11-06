@@ -12,7 +12,8 @@ import { MonthlyReportTab } from './components/MonthlyReportTab';
 import { AlertsTab } from './components/AlertsTab';
 import { ChatbotTab } from './components/ChatbotTab';
 import { ProductIaTab } from './components/ProductIaTab';
-import { CatalogSalesTab } from './components/CatalogSalesTab';
+import { CatalogTab } from './components/CatalogTab';
+import { SalesDashboardTab } from './components/SalesDashboardTab';
 import { SetupAssistantModal } from './components/SetupAssistantModal';
 
 import {
@@ -240,11 +241,19 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'catalog-sales' && (
-            <CatalogSalesTab
+          {(activeTab === 'catalog' || activeTab === 'catalog-sales') && (
+            <CatalogTab
               storeDomain={vtexConfig.storeDomain}
               accountName={vtexConfig.accountName}
               onSendProductToIa={handleSendProductToIa}
+            />
+          )}
+
+          {activeTab === 'sales' && (
+            <SalesDashboardTab
+              storeDomain={vtexConfig.storeDomain}
+              accountName={vtexConfig.accountName}
+              onOpenSetup={() => setIsSetupOpen(true)}
             />
           )}
 

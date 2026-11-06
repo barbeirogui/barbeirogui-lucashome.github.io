@@ -1,119 +1,76 @@
-# Integração do Catálogo Real VTEX, Painel de Vendas, Sitemap Oficial e Correção XML do Subtemplate CMS Legacy
+# Integração da Árvore Viva de Categorias e Subcategorias VTEX (Lucas Home)
 
-Plano completo de arquitetura e implementação para conectar o catálogo real de produtos e análise de vendas da loja **Lucas Home** na VTEX, eliminar dados de calçados do validador de sitemap lendo os XMLs reais (`category-0.xml`, `product-0.xml`), corrigir a compatibilidade XML do snippet de `skuJson` no CMS Legacy e garantir armazenamento seguro e mascarado de chaves no backend.
+Plano detalhado para carregar dinamicamente a árvore completa de categorias e subcategorias diretamente da API oficial da VTEX (`/api/vtex/catalog-categories`), incluir as categorias que estavam ausentes nos filtros rápidos (**Camas Conceito**, **Camas Baú Conceito** e **Colchões Enrolados**) e disponibilizar um seletor multinível para filtragem refinada por subcategorias (Casal, Queen, King, Solteiro, Viúva, Solteirinho).
 
 ---
 
 ### Decisões Confirmadas com o Usuário
 
-- **Localização do Catálogo e Vendas**: Implementar tanto a nova aba dedicada **Catálogo & Vendas** na navegação principal quanto a integração contextual dos produtos reais na aba **Produto IA** (seleção de produtos do catálogo da Lucas Home com 1 clique) e métricas consolidadas no **Dashboard**.
-- **Segurança de Chaves e Tokens VTEX**: Armazenamento seguro no backend (`store-config.json` protegido com mascaramento de exibição `vtexappkey-lucashome-***` e `••••••••••••`), sem expor o segredo no payload público do cliente, com suporte a injeção via variáveis de ambiente (`VTEX_ACCOUNT`, `VTEX_APP_KEY`, `VTEX_APP_TOKEN`).
-- **Validador de Sitemap**: Obtenção de URLs híbrida em tempo real: lê diretamente os sitemaps XML oficiais da VTEX (`https://lucashome.vtexcommercestable.com.br/sitemap/category-0.xml` e `product-0.xml`) combinados com a API pública de busca de produtos (`/api/catalog_system/pub/products/search`), eliminando permanentemente qualquer URL fictícia de calçados (`/calcados/tenis-running-pro/p`).
-- **Correção do Subtemplate VTEX CMS Legacy**: No motor de templates do VTEX Portal, o subtemplate é processado por um parser XML/XSL estrito. Caracteres `&&` soltos causam a exceção fatal:
-  `An error occurred while parsing EntityName. Line 52, position 39`.
-  A correção envolve:
-  1. Envolver os blocos JavaScript em `//<![CDATA[ ... //]]>` ou usar entidades XML (`&amp;&amp;`).
-  2. Fornecer a versão estruturada em `CDATA` pronta para colar diretamente no template do CMS sem erros.
+- **Árvore Viva via API**: Substituir a lista estática por uma chamada dinâmica que consome `/api/vtex/catalog-categories` em tempo real, mapeando todos os 8 departamentos raiz da Lucas Home e suas mais de 30 subcategorias.
+- **Seletor Multinível Hierárquico**:
+  - **Nível 1 (Departamento Raiz)**: Todas as Categorias, Camas Conceito, Camas Baú Conceito, Colchões Enrolados, Base Box, Base Baú, Bicamas, Cabeceiras e Colchões.
+  - **Nível 2 (Subcategorias Contextuais)**: Ao selecionar um departamento (ex: *Camas Conceito* ou *Base Baú*), o sistema exibe imediatamente as subcategorias correspondentes (*Casal, Queen, King, Solteirinho, Solteiro King, Viúva, etc.*) como filtros refinados.
+- **Integração com Busca e Paginação**: O filtro aciona a API de busca da VTEX via `fq=C:{id}`, atualizando a grade de produtos com a contagem exata e imagem oficial de cada item.
 
 ---
 
-## 1. Visão Geral do Sistema e Arquitetura
+## 1. Mapeamento Completo da Árvore da Lucas Home
 
-O sistema passará a operar com 4 novos pilares funcionais:
+A API `/api/catalog_system/pub/category/tree/3` da conta `lucashome` retorna 8 departamentos oficiais:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        VTEX Pulse - Lucas Home                         │
+│               Árvore Completa de Categorias (Lucas Home)               │
 └──────────────────────────────────┬─────────────────────────────────────┘
                                    │
-       ┌───────────────────────────┼───────────────────────────┐
-       ▼                           ▼                           ▼
-┌──────────────┐          ┌────────────────┐          ┌────────────────┐
-│  Catálogo &  │          │   Sitemap &    │          │  Subtemplates  │
-│ Vendas Reais │          │   Indexação    │          │   CMS Legacy   │
-├──────────────┤          ├────────────────┤          ├────────────────┤
-│• 50+ produtos│          │• XML oficial   │          │• CDATA safe    │
-│  Lucas Home  │          │  category-0.xml│          │• Zero erro &&  │
-│• Vendas OMS/ │          │• product-0.xml │          │  no XML parser │
-│  Analytics   │          │• Zero calçados │          │• skuJson real  │
-└──────┬───────┘          └────────┬───────┘          └────────┬───────┘
-       │                           │                           │
-       └───────────────────────────┼───────────────────────────┘
-                                   ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│                  Backend Express Proxy (/api/vtex/*)                   │
-├────────────────────────────────────────────────────────────────────────┤
-│ • GET /api/vtex/catalog-products (Paginação, busca, filtros)           │
-│ • GET /api/vtex/sales-dashboard (Ticket médio, receita, conversão)     │
-│ • POST /api/vtex/fetch-official-sitemap (Parsers XML de sitemaps)      │
-│ • Mascaramento de segurança para AppKey e AppToken                     │
-└────────────────────────────────────────────────────────────────────────┘
+  ┌───────────────┬────────────────┼───────────────┬────────────────┐
+  ▼               ▼                ▼               ▼                ▼
+[264]           [265]            [266]           [267]            [268]
+Camas Conceito  Camas Baú Conc.  Colchões Enrol. Base Box         Base Baú
+├── Casal (280) ├── Casal (297)  ├── Solt. (278) ├── Queen (284)  ├── Queen (288)
+├── Queen (281) └── Queen (298)  ├── Casal (279) ├── Casal (285)  ├── Solt. (289)
+└── King (307)                   └── Queen (299) ├── Solt. (286)  ├── King (290)
+                                                 ├── Viúva (287)  ├── Casal (291)
+                                                 ├── King (300)   ├── Viúva (292)
+                                                 └── Solt. (304)  └── Solt. (306)
+  ┌────────────────────────────────┼────────────────────────────────┐
+  ▼                                ▼                                ▼
+[269]                            [271]                            [272]
+Bicamas                          Cabeceiras                       Colchões
+├── Bicama Box + Colchão (293)   ├── Cabeceira Casal (282)        ├── Colchão Solteiro (273)
+├── Bicama Baú + Colchão (294)   └── Cabeceira Queen (283)        ├── Colchão Viúva (274)
+├── Bicama Conjugada (295)                                        ├── Colchão Casal (275)
+├── Bicamas Avulsas (296)                                         ├── Colchão Queen (276)
+└── Bicama Box Casal (301)                                        └── Colchão King (277)
 ```
 
 ---
 
 ## 2. Experiência do Usuário (UX) & Design Visual
 
-### A. Nova Aba "Catálogo & Vendas"
-- **Seletor de Categorias e Departamentos**: Navegação pelas categorias reais da Lucas Home (*Colchões, Camas Conceito, Camas Baú Conceito, Base Box, Base Baú, Bicamas, Cabeceiras*).
-- **Tabela de Auditoria de Produtos do Catálogo**:
-  - Imagem do produto, Título, SKU/Referência, Marca (Ortobom, Gazin, Lucas Home, etc.), Preço Pix vs Cartão, Estoque e Status SEO (Title, Description, URL amigável).
-  - Ação rápida com 1 clique: **"Otimizar com Produto IA"** — carrega automaticamente o nome, atributos e categoria do produto selecionado no gerador de conteúdo persuasivo e tags SEO.
-- **Painel de Desempenho de Vendas**:
-  - Cards de KPI com números tabulares (`tabular-nums`): Faturamento 30d, Quantidade de Pedidos, Ticket Médio, Taxa de Conversão por Categoria.
-  - Alertas de produtos de alto volume com descrição curta ou sem meta-tags otimizadas.
-
-### B. Integração Contextual no "Produto IA"
-- Barra de seleção rápida **"Puxar Produto do Catálogo da Loja"**: Um dropdown pesquisável com os produtos reais da Lucas Home que preenche instantaneamente o formulário, eliminando digitação manual.
-
-### C. Sanitização do Validador de Sitemap
-- O botão **"Carregar Sitemap Oficial VTEX"** agora faz o parse de `https://lucashome.vtexcommercestable.com.br/sitemap/category-0.xml` e `product-0.xml`.
-- O relatório de auditoria não conterá nenhum item de `/calcados/` ou `/roupas/`; todas as falhas detectadas refletirão a realidade do catálogo e das URLs da Lucas Home.
-
-### D. Subtemplate CMS Legacy com Blindagem CDATA
-- Atualização imediata do gerador de código Schema.org (`skuJson`) para incluir a blindagem XML oficial:
-  ```html
-  <script type="text/javascript">
-  //<![CDATA[
-    $(document).ready(function() {
-      if (typeof skuJson !== 'undefined' && skuJson.skus && skuJson.skus.length > 0) {
-        // Código seguro que não quebra o parser XML do CMS Legacy
-      }
-    });
-  //]]>
-  </script>
-  ```
-- Adição de um seletor de formato: **"Formato CMS Legacy (com CDATA para evitar erro de EntityName)"** com botão de cópia rápida e instrução passo a passo para o subtemplate.
+1. **Barra de Navegação Multinível**:
+   - Linha 1: Botões de rolagem suave com ícone de categoria para os 8 departamentos principais + opção "Todas as Categorias" com contadores ativos.
+   - Linha 2 (Contextual): Quando um departamento for selecionado, uma barra secundária translúcida surge com as subcategorias filhas daquele departamento.
+2. **Badge de Categoria Ativa**:
+   - Exibe a trilha de navegação (breadcrumb de filtro), por exemplo: `Camas Conceito > Queen (ID: 281)`.
+   - Botão para limpar o filtro de subcategoria ou voltar para a raiz com 1 clique.
+3. **Sincronização com o "Product IA"**:
+   - Quando o usuário clica em "Otimizar com IA", a árvore de categoria e subcategoria é transmitida para o formulário gerador.
 
 ---
 
-## 3. Segurança e Armazenamento no Backend
+## 3. Plano de Implementação
 
-1. **Proteção contra Vazamento de Credenciais**:
-   - `AppToken` nunca é retornado em texto claro nas requisições GET `/api/config` ou `/api/vtex/live-metrics`. O servidor retorna apenas o status de configuração e uma versão mascarada (`••••••••••••`).
-   - Apenas o backend utiliza o token na comunicação direta server-to-server com a VTEX (`X-VTEX-API-AppKey` e `X-VTEX-API-AppToken`).
-2. **Suporte a Variáveis de Ambiente**:
-   - Se existirem no ambiente (`process.env.VTEX_APP_KEY`, `process.env.VTEX_APP_TOKEN`), o backend as priorizará automaticamente, permitindo operar sem persistir chaves em arquivos de texto.
+1. **Tipos (`src/types/index.ts`)**:
+   - Adicionar ou exportar a interface `VtexCategoryTreeItem` contendo `id`, `name`, `url`, `hasChildren` e `children?: VtexCategoryTreeItem[]`.
 
----
+2. **Componente `CatalogSalesTab.tsx`**:
+   - Adicionar estado `categoriesTree: VtexCategoryTreeItem[]` e carregar via `GET /api/vtex/catalog-categories` na montagem.
+   - Substituir o array fixo de 6 itens pela árvore viva de 8 departamentos + subcategorias filhas.
+   - Implementar estado `selectedParentCategory` e `selectedSubCategory`.
+   - Ao clicar em uma subcategoria, filtrar os produtos chamando `/api/vtex/catalog-products?categoryId=${subId}`.
 
-## 4. Plano de Execução Técnica
-
-1. **Backend (`server.ts`)**:
-   - Implementar endpoint `/api/vtex/catalog-products`: consulta `https://lucashome.vtexcommercestable.com.br/api/catalog_system/pub/products/search` com paginação, filtros de categoria e ordenação.
-   - Implementar endpoint `/api/vtex/sales-dashboard`: agrega métricas consolidadas de vendas, faturamento e desempenho por categoria para a Lucas Home.
-   - Atualizar `/api/vtex/fetch-sitemap-urls` e rota de sitemap para ler o `sitemap.xml` oficial da VTEX (`category-0.xml` e `product-0.xml`).
-   - Ajustar todos os snippets gerados no backend para usar wrappers `//<![CDATA[` e evitar o erro de `&` / `&&`.
-   - Adicionar mascaramento do `appToken` na API de configurações.
-
-2. **Frontend (`src/components/`)**:
-   - Criar componente `CatalogSalesTab.tsx` com navegação visual dos produtos reais da Lucas Home, busca por termo/SKU, filtros e botão para enviar ao `ProductIaTab`.
-   - Atualizar a barra de navegação em `App.tsx` para incluir a nova aba **Catálogo & Vendas**.
-   - Conectar o botão no `ProductIaTab` para receber produto importado do catálogo.
-   - Atualizar `SitemapUrlBuilderTab.tsx` para carregar o sitemap XML oficial e remover qualquer resquício de `/calcados/`.
-   - Atualizar as recomendações de Subtemplate em `AiSuggestionsTab.tsx` com o código devidamente escapado para o VTEX Portal.
-
-3. **Validação & Testes**:
-   - Executar suíte de testes (`productContentEngine.test.ts`, `seoHtmlValidator.test.ts`, `metricsEngine.test.ts`).
-   - Compilar e checar linter (`compile_applet` e `lint_applet`).
-   - Testar chamadas aos endpoints ao vivo da Lucas Home.
+3. **Verificação & Testes**:
+   - Executar suíte de testes existente (`productContentEngine.test.ts`, `seoHtmlValidator.test.ts`, `metricsEngine.test.ts`).
+   - Co-executar `compile_applet` e `lint_applet` para certificar zero erros de compilação TypeScript.
+   - Testar navegação nas categorias *Camas Conceito*, *Camas Baú Conceito* e *Colchões Enrolados*.

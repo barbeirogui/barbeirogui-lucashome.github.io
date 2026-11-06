@@ -890,16 +890,25 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">
-                    VTEX AppToken (X-VTEX-API-AppToken)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-slate-300">
+                      VTEX AppToken (X-VTEX-API-AppToken)
+                    </label>
+                    <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-medium">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>Protegido no Backend</span>
+                    </span>
+                  </div>
                   <input
                     type="password"
-                    placeholder="Token secreto da chave..."
+                    placeholder="Token secreto da chave (oculto no front)..."
                     value={appToken}
                     onChange={(e) => setAppToken(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-mono placeholder-slate-500 focus:outline-none focus:border-pink-500"
                   />
+                  <span className="text-[10px] text-slate-500 mt-0.5 block">
+                    O token nunca é exposto em texto claro no navegador e pode ser configurado via variável <code className="text-pink-400">VTEX_APP_TOKEN</code>.
+                  </span>
                 </div>
 
                 <div className="md:col-span-2">

@@ -17,10 +17,13 @@ import {
   PanelLeftOpen,
   Wand2,
   Package,
+  TrendingUp,
 } from 'lucide-react';
 
 export type TabType =
   | 'overview'
+  | 'catalog'
+  | 'sales'
   | 'catalog-sales'
   | 'product-ia'
   | 'sitemap-urls'
@@ -55,9 +58,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navTabs: { id: TabType; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: 'overview', label: 'Visão Geral', icon: <ShoppingCart className="w-4 h-4 shrink-0" /> },
     {
-      id: 'catalog-sales',
-      label: 'Catálogo & Vendas',
+      id: 'catalog',
+      label: 'Catálogo de Produtos',
       icon: <Package className="w-4 h-4 shrink-0 text-emerald-400" />,
+    },
+    {
+      id: 'sales',
+      label: 'Vendas & OMS',
+      icon: <TrendingUp className="w-4 h-4 shrink-0 text-pink-400" />,
     },
     {
       id: 'product-ia',
