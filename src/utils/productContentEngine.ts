@@ -423,7 +423,7 @@ ${schemaJsonLd}
       urlRoute: `/admin/vtex/cms/layout/html-templates`,
     },
     generatedAt: new Date().toLocaleString('pt-BR'),
-    modelUsed: 'VTEX Pulse Copilot (Especialista em Catálogo Legacy)',
+    modelUsed: 'Lucas IA Copilot (Especialista em Catálogo Legacy)',
   };
 }
 
@@ -1157,7 +1157,7 @@ export function generateCuratedLsiAnalysis(params: {
     seoRecommendation:
       'Para obter os melhores resultados no Google e nas IAs (Perplexity, ChatGPT Search), distribua os termos LSI de forma fluida ao longo do texto. Utilize a palavra-chave alvo no título (H1) e no primeiro parágrafo, as especificações técnicas em listas não ordenadas, e os sinônimos nos subtítulos (H2). Evite repetições mecânicas: motores de busca modernos ranqueiam por cobertura semântica de entidades, não por repetição exata.',
     generatedAt: new Date().toLocaleString('pt-BR'),
-    modelUsed: 'VTEX Pulse Semantic LSI Engine',
+    modelUsed: 'Lucas IA Semantic Engine',
   };
 }
 

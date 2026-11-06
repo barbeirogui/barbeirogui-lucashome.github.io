@@ -14,7 +14,7 @@ import { ChatbotTab } from './components/ChatbotTab';
 import { ProductIaTab } from './components/ProductIaTab';
 import { CatalogTab } from './components/CatalogTab';
 import { SalesDashboardTab } from './components/SalesDashboardTab';
-import { SetupAssistantModal } from './components/SetupAssistantModal';
+import { SettingsTab } from './components/SettingsTab';
 
 import {
   coreMetricsData,
@@ -27,7 +27,6 @@ import { OptimizationSuggestion, VtexConfig, GoogleConfig, VtexCatalogProduct } 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [dropThreshold, setDropThreshold] = useState<number>(12);
 
   // Load persisted configuration from localStorage if available
@@ -207,7 +206,7 @@ export default function App() {
         isCollapsed={isSidebarCollapsed}
         setIsCollapsed={setIsSidebarCollapsed}
         unreadAlertsCount={unreadAlertsCount}
-        onOpenSetup={() => setIsSetupOpen(true)}
+        onOpenSetup={() => setActiveTab('settings')}
         storeName={vtexConfig.accountName}
       />
 
@@ -224,7 +223,7 @@ export default function App() {
           isCollapsed={isSidebarCollapsed}
           setIsCollapsed={setIsSidebarCollapsed}
           unreadAlertsCount={unreadAlertsCount}
-          onOpenSetup={() => setIsSetupOpen(true)}
+          onOpenSetup={() => setActiveTab('settings')}
           storeName={vtexConfig.accountName}
           vtexConfig={vtexConfig}
         />
@@ -235,7 +234,7 @@ export default function App() {
             <OverviewTab
               metrics={metrics}
               onNavigateTab={setActiveTab}
-              onOpenSetup={() => setIsSetupOpen(true)}
+              onOpenSetup={() => setActiveTab('settings')}
               isVtexConnected={vtexConfig.isConnected}
               vtexConfig={vtexConfig}
             />
@@ -253,7 +252,7 @@ export default function App() {
             <SalesDashboardTab
               storeDomain={vtexConfig.storeDomain}
               accountName={vtexConfig.accountName}
-              onOpenSetup={() => setIsSetupOpen(true)}
+              onOpenSetup={() => setActiveTab('settings')}
             />
           )}
 
@@ -299,15 +298,24 @@ export default function App() {
               setDropThreshold={setDropThreshold}
             />
           )}
+
+          {activeTab === 'settings' && (
+            <SettingsTab
+              vtexConfig={vtexConfig}
+              onSaveVtexConfig={handleSaveVtexConfig}
+              googleConfig={googleConfig}
+              onSaveGoogleConfig={handleSaveGoogleConfig}
+            />
+          )}
         </main>
 
         {/* Footer */}
         <footer className="border-t border-slate-900 bg-slate-950 text-slate-400 py-5 text-xs">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-300">VTEX Pulse</span>
+              <span className="font-semibold text-white">Lucas IA</span>
               <span>·</span>
-              <span>Plataforma de Otimização e Crescimento de E-commerce</span>
+              <span>Plataforma de IA & Crescimento de E-commerce Lucas Home</span>
             </div>
 
             <div className="flex items-center gap-4 text-[11px] text-slate-400">
@@ -320,16 +328,6 @@ export default function App() {
           </div>
         </footer>
       </div>
-
-      {/* Setup Assistant Modal */}
-      <SetupAssistantModal
-        isOpen={isSetupOpen}
-        onClose={() => setIsSetupOpen(false)}
-        vtexConfig={vtexConfig}
-        onSaveVtexConfig={handleSaveVtexConfig}
-        googleConfig={googleConfig}
-        onSaveGoogleConfig={handleSaveGoogleConfig}
-      />
     </div>
   );
 }

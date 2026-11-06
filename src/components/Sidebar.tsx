@@ -34,7 +34,8 @@ export type TabType =
   | 'ai-suggestions'
   | 'chat'
   | 'monthly-reports'
-  | 'alerts';
+  | 'alerts'
+  | 'settings';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -86,6 +87,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       icon: <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />,
       badge: unreadAlertsCount,
     },
+    {
+      id: 'settings',
+      label: 'Configurações da Loja',
+      icon: <Sliders className="w-4 h-4 shrink-0 text-pink-400" />,
+    },
   ];
 
   return (
@@ -98,17 +104,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div>
         <div className="h-16 px-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-lg bg-pink-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 font-bold text-base shrink-0">
-              V
+            <div className="w-8 h-8 rounded-lg bg-pink-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 font-bold text-sm shrink-0 shadow-sm">
+              L
             </div>
 
             {!isCollapsed && (
               <div className="flex flex-col min-w-0 transition-opacity duration-200">
-                <span className="text-sm font-bold text-white tracking-tight truncate">
-                  VTEX Pulse
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold text-white tracking-tight truncate">
+                    Lucas IA
+                  </span>
+                  <span className="px-1 py-0.2 text-[9px] font-bold rounded bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                    ECO
+                  </span>
+                </div>
                 <span className="text-[10px] text-slate-400 truncate">
-                  {storeName} <strong className="text-pink-400 font-mono">(CMS Legacy)</strong>
+                  {storeName} <strong className="text-pink-400 font-mono">(VTEX CMS)</strong>
                 </span>
               </div>
             )}
@@ -170,15 +181,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Sidebar Footer */}
       <div className="p-3 border-t border-slate-800 space-y-2 bg-slate-950/90">
         <button
-          onClick={onOpenSetup}
-          title={isCollapsed ? 'Configurações & Vínculos' : undefined}
-          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 transition-colors shadow-sm active:scale-95 cursor-pointer ${
-            isCollapsed ? 'justify-center' : 'justify-start'
-          }`}
+          onClick={() => setActiveTab('settings')}
+          title={isCollapsed ? 'Configurações da Loja' : undefined}
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all shadow-sm active:scale-95 cursor-pointer ${
+            activeTab === 'settings'
+              ? 'bg-pink-600 text-white ring-2 ring-pink-400'
+              : 'text-slate-200 bg-slate-900 hover:bg-slate-800 border border-slate-800'
+          } ${isCollapsed ? 'justify-center' : 'justify-start'}`}
           aria-label="Abrir configurações da loja e ferramentas"
         >
-          <Sliders className="w-4 h-4 shrink-0" />
-          {!isCollapsed && <span className="truncate">Configurações</span>}
+          <Sliders className="w-4 h-4 shrink-0 text-pink-400" />
+          {!isCollapsed && <span className="truncate">Configurações da Loja</span>}
         </button>
 
         {!isCollapsed && (

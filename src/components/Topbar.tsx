@@ -61,6 +61,10 @@ const TAB_TITLES: Record<TabType, { label: string; icon: React.ReactNode }> = {
   chat: { label: 'Chatbot Especialista VTEX Legacy', icon: <MessageSquare className="w-4 h-4 text-pink-400" /> },
   'monthly-reports': { label: 'Relatórios MoM Comparativos', icon: <FileText className="w-4 h-4 text-emerald-400" /> },
   alerts: { label: 'Monitoramento de Quedas Bruscas', icon: <AlertTriangle className="w-4 h-4 text-rose-400" /> },
+  settings: {
+    label: 'Configurações da Loja & Validação de Vínculos',
+    icon: <Sliders className="w-4 h-4 text-pink-400" />,
+  },
 };
 
 export const Topbar: React.FC<TopbarProps> = ({
@@ -97,7 +101,7 @@ export const Topbar: React.FC<TopbarProps> = ({
             {currentTabInfo.icon}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 hidden sm:inline">VTEX Pulse /</span>
+            <span className="text-xs text-slate-400 hidden sm:inline">Lucas IA /</span>
             <span className="text-xs sm:text-sm font-bold text-white tracking-tight">
               {currentTabInfo.label}
             </span>
@@ -120,7 +124,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           </div>
         ) : vtexConfig?.connectionMode === 'error' ? (
           <button
-            onClick={onOpenSetup}
+            onClick={() => setActiveTab('settings')}
             className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/40 text-[11px] text-rose-300 hover:bg-rose-500/25 transition cursor-pointer"
             title="Chave VTEX incorreta ou rejeitada (HTTP 401/403). Clique para corrigir."
           >
@@ -129,7 +133,7 @@ export const Topbar: React.FC<TopbarProps> = ({
           </button>
         ) : (
           <button
-            onClick={onOpenSetup}
+            onClick={() => setActiveTab('settings')}
             className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 hover:bg-amber-500/20 transition cursor-pointer"
             title="Clique para ver o status e instruções para conectar chaves de produção"
           >
@@ -155,12 +159,16 @@ export const Topbar: React.FC<TopbarProps> = ({
 
         {/* Primary Action Button */}
         <button
-          onClick={onOpenSetup}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 rounded-lg shadow-sm transition-colors whitespace-nowrap active:scale-95 cursor-pointer"
-          title="Abrir configurações e vínculos"
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg shadow-sm transition-colors whitespace-nowrap active:scale-95 cursor-pointer ${
+            activeTab === 'settings'
+              ? 'bg-pink-600 text-white ring-2 ring-pink-400'
+              : 'text-white bg-slate-800 hover:bg-slate-700 border border-slate-700'
+          }`}
+          title="Abrir página de configurações e vínculos"
           aria-label="Abrir configurações"
         >
-          <Sliders className="w-3.5 h-3.5" />
+          <Sliders className="w-3.5 h-3.5 text-pink-400" />
           <span className="hidden sm:inline">Configurações</span>
         </button>
       </div>

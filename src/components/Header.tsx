@@ -49,8 +49,8 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Zone 1: Brand Wordmark */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-pink-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 font-bold text-base">
-            V
+          <div className="w-8 h-8 rounded-lg bg-pink-600/20 border border-pink-500/40 flex items-center justify-center text-pink-400 font-bold text-sm shadow-sm">
+            L
           </div>
           <div className="flex flex-col">
             <a
@@ -61,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className="text-base font-bold tracking-tight text-white whitespace-nowrap hover:text-pink-400 transition-colors"
             >
-              VTEX Pulse
+              Lucas IA
             </a>
             <span className="text-[10px] text-slate-400 whitespace-nowrap">
               Loja: <strong className="text-slate-200">{storeName}</strong>{' '}

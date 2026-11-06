@@ -22,18 +22,14 @@ import {
 import { VtexConfig, GoogleConfig, ToolValidationResult, SyntheticConnectionReport } from '../types';
 import { VtexCatalogLiveChecker } from './VtexCatalogLiveChecker.tsx';
 
-interface SetupAssistantModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+interface SettingsTabProps {
   vtexConfig: VtexConfig;
   onSaveVtexConfig: (config: VtexConfig) => void;
   googleConfig: GoogleConfig;
   onSaveGoogleConfig: (config: GoogleConfig) => void;
 }
 
-export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
-  isOpen,
-  onClose,
+export const SettingsTab: React.FC<SettingsTabProps> = ({
   vtexConfig,
   onSaveVtexConfig,
   googleConfig,
@@ -109,27 +105,23 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen) {
-      setAccountName(vtexConfig.accountName);
-      setAppKey(vtexConfig.appKey);
-      setAppToken(vtexConfig.appToken);
-      setEnvironment(vtexConfig.environment);
-      setStoreDomain(vtexConfig.storeDomain);
-      setGscProperty(googleConfig.searchConsoleProperty);
-      setGa4Property(googleConfig.ga4PropertyId);
-      setGa4Measurement(googleConfig.ga4MeasurementId);
-      runSyntheticCheck({
-        accName: vtexConfig.accountName,
-        aKey: vtexConfig.appKey,
-        aToken: vtexConfig.appToken,
-        env: vtexConfig.environment,
-        domain: vtexConfig.storeDomain,
-        gsc: googleConfig.searchConsoleProperty,
-      });
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+    setAccountName(vtexConfig.accountName);
+    setAppKey(vtexConfig.appKey);
+    setAppToken(vtexConfig.appToken);
+    setEnvironment(vtexConfig.environment);
+    setStoreDomain(vtexConfig.storeDomain);
+    setGscProperty(googleConfig.searchConsoleProperty);
+    setGa4Property(googleConfig.ga4PropertyId);
+    setGa4Measurement(googleConfig.ga4MeasurementId);
+    runSyntheticCheck({
+      accName: vtexConfig.accountName,
+      aKey: vtexConfig.appKey,
+      aToken: vtexConfig.appToken,
+      env: vtexConfig.environment,
+      domain: vtexConfig.storeDomain,
+      gsc: googleConfig.searchConsoleProperty,
+    });
+  }, [vtexConfig, googleConfig]);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -369,48 +361,41 @@ export const SetupAssistantModal: React.FC<SetupAssistantModalProps> = ({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="setup-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm overflow-y-auto"
-    >
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden my-auto">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-pink-600/20 text-pink-400 rounded-lg border border-pink-500/30">
-              <Sliders className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 id="setup-modal-title" className="text-base font-bold text-white">
-                Configurações da Loja & Validação de Vínculos
-              </h2>
-              <p className="text-xs text-slate-400">
-                Conecte, salve e teste em tempo real o vínculo da sua loja VTEX CMS Legacy, Search Console, GA4 e IAs (GEO).
-              </p>
-            </div>
+    <div className="space-y-6">
+      {/* Page Header Banner */}
+      <div className="p-6 rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="font-semibold text-pink-400">Lucas IA & Ecossistema</span>
+            <span className="text-slate-500" aria-hidden="true">·</span>
+            <span className="text-slate-300 font-mono">Loja: {vtexConfig.accountName}</span>
+            <span className="text-slate-500" aria-hidden="true">·</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-pink-950/60 text-pink-300 border border-pink-500/40">
+              Painel de Integrações
+            </span>
           </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSaveAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-all cursor-pointer active:scale-95"
-              title="Salvar todas as alterações"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Salvar Alterações</span>
-            </button>
-
-            <button
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
-              aria-label="Fechar modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
+            <Sliders className="w-6 h-6 text-pink-400" />
+            <span>Configurações da Loja & Validação de Vínculos</span>
+          </h1>
+          <p className="text-sm text-slate-300">
+            Conecte, salve e teste em tempo real o vínculo da sua loja VTEX CMS Legacy, Search Console, GA4 e IAs (GEO).
+          </p>
         </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSaveAll}
+            className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md transition-all cursor-pointer active:scale-95"
+            title="Salvar todas as alterações"
+          >
+            <Check className="w-4 h-4" />
+            <span>Salvar Alterações</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-xl flex flex-col overflow-hidden">
 
         {/* Global Save Notice */}
         {saveSuccessNotice && (
@@ -1274,14 +1259,8 @@ Sitemap: https://${storeDomain || 'www.sualoja.com.br'}/sitemap.xml`}
           </div>
           <div className="flex items-center gap-2.5">
             <button
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors cursor-pointer"
-            >
-              Fechar
-            </button>
-            <button
               onClick={handleSaveAll}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-md transition-all cursor-pointer active:scale-95"
+              className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-md transition-all cursor-pointer active:scale-95"
             >
               <Check className="w-3.5 h-3.5" />
               <span>Salvar Todas as Configurações</span>
